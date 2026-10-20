@@ -9,8 +9,9 @@ and dashboards that reference that entity ID can then use the replacement bulb.
 The new bulb must already be added to Home Assistant through its normal
 integration. This wizard does not pair devices.
 
-Version **0.2.0** includes optional support for copying **ZHA bindings and Zigbee
-group memberships**, with a preview, verification and undo.
+Version **0.2.1** supports copying bindings and Zigbee group memberships through
+**ZHA or Zigbee2MQTT**, with a preview, confirmation and undo. Zigbee2MQTT
+discovery uses its cached bridge records; see the limitations below.
 
 ## Features
 
@@ -22,7 +23,8 @@ group memberships**, with a preview, verification and undo.
   device's labels to the new entity's existing labels.
 - Detect ID collisions and known device-ID or registry-UUID references that need
   manual changes.
-- Optionally discover and copy compatible ZHA bindings and Zigbee groups.
+- Optionally discover and copy compatible bindings and Zigbee groups through
+  ZHA or Zigbee2MQTT on the same network.
 - Undo the last replacement or recover an interrupted operation.
 - English interface text, including when Home Assistant uses Norwegian Bokmål.
 - Bundled integration icon showing an unlit bulb replaced by a working bulb.
@@ -33,8 +35,15 @@ group memberships**, with a preview, verification and undo.
 - Two registered `light` entities. Light groups cannot be selected as bulbs.
 - The new bulb must be enabled and available. The old bulb may be offline, but
   its entity must still exist in Home Assistant.
-- For binding and group copying, both bulbs must be on the same running **ZHA**
+- For **ZHA** binding/group copying, both bulbs must be on the same running ZHA
   network. The adapter was developed against ZHA **2.3.1** and Zigpy **2.3.0**.
+- For **Zigbee2MQTT** binding/group copying, both bulbs must be discovered through
+  the HA **MQTT** integration and registered on the same Zigbee2MQTT bridge. HA
+  must already be connected to that bridge's MQTT broker. The bridge must publish
+  `bridge/state`, `bridge/info`, `bridge/devices` and `bridge/groups`, and support
+  the documented binding/group request API. Use a current Zigbee2MQTT release.
+- Binding copying between ZHA and Zigbee2MQTT, or between different networks,
+  is not supported. Entity-ID replacement can be used independently of copying.
 
 The initial release has automated tests with simulated bulbs and radio responses.
 It has **not yet been tested with physical Zigbee hardware**.
@@ -85,6 +94,7 @@ or add it manually:
            ├── translations/
            │   ├── en.json
            │   └── nb.json
+           ├── z2m.py
            └── zha.py
    ```
 
@@ -115,8 +125,11 @@ After installing the files and restarting HA, you can also
 4. In **Old bulb**, select the `light` entity you want to replace.
 5. In **New bulb**, select the replacement `light` entity. These must be two
    different entities.
-6. For two ZHA bulbs, optionally enable **Discover and copy ZHA bindings and
-   Zigbee groups**. Wake battery remotes before starting the scan.
+6. Optionally enable copying for **one** backend: **Discover and copy ZHA bindings
+   and Zigbee groups** or **Discover and copy Zigbee2MQTT bindings and Zigbee
+   groups**. For Zigbee2MQTT, enter the MQTT base topic (normally `zigbee2mqtt`);
+   leave endpoint fields empty for automatic selection. Wake affected battery
+   remotes before copying.
 7. Review the proposed changes and resolve any blocking references. Take a Home
    Assistant backup and pause affected automations before confirming: state
    changes during replacement may trigger them.
@@ -174,6 +187,57 @@ On-device Zigbee scenes, attribute reporting settings and manufacturer-specific
 configuration are not copied. The wizard uses ZHA's existing gateway; it does
 not open a second connection to the radio adapter.
 
+## Zigbee2MQTT bindings and Zigbee groups
+
+Select both bulbs in the normal HA entity pickers and enable **Discover and copy
+Zigbee2MQTT bindings and Zigbee groups**. On the next page, enter the bridge's
+**MQTT base topic**, normally `zigbee2mqtt`. Custom topics such as
+`house/zigbee` are supported. The wizard uses HA's existing MQTT connection;
+it does not need broker credentials or a separate Zigbee adapter connection.
+
+Endpoints are selected automatically for single-channel bulbs or when the
+selected HA light can be matched to a named Zigbee2MQTT endpoint. For ambiguous
+multi-channel devices, enter the old and new numeric endpoint IDs shown in
+Zigbee2MQTT. The wizard refuses to guess between multiple light channels.
+
+The preview finds incoming and outgoing bindings involving the selected light
+endpoint in **Zigbee2MQTT's cached `bridge/devices` records**, plus membership in
+its `bridge/groups` records. It copies supported standard clusters and adds the
+new bulb to the old bulb's known groups. Other channels are left out of the
+replacement. Incompatible or manufacturer-specific bindings block copying.
+
+**Cached discovery is always marked incomplete.** The MQTT API does not provide
+an equivalent of ZHA's network-wide direct binding-table scan. Missing or stale
+bridge records may hide bindings or group memberships, even if the preview is
+empty. Review the preview and explicitly accept copying only known records.
+The old bulb may be offline, but keep it registered on the bridge for discovery
+and undo.
+
+Before writing, the wizard checks the bridge is responding, verifies the selected
+network and endpoints, and records existing bindings/memberships as the baseline.
+Each addition is journaled before sending it, uses a unique MQTT transaction ID,
+and requires both a successful command response and a matching bridge metadata
+update. This verifies the bridge's view; it **does not independently read back
+the physical device's binding or group table**. Test your physical controls.
+
+Original entries are retained, so both bulbs may respond until the old one is
+disconnected. Undo removes the requested additions and preserves entries that
+were already recorded on the new bulb. Lost acknowledgements and interruptions
+retain enough information to retry removal of the requested additions. Recovery
+requires the original MQTT base topic, coordinator and Zigbee network.
+
+Zigbee2MQTT's normal bind/group commands may automatically configure reporting
+or add coordinator bindings. Those side effects are not restored by undo.
+The wizard requests that unbinding/group removal does not disable reporting.
+Unrecorded device settings, on-device Zigbee scenes, arbitrary external MQTT
+topic references and Zigbee2MQTT friendly names are not migrated. HA entity
+names and IDs are changed in HA; MQTT topics and Zigbee2MQTT device names remain
+as configured on the bridge.
+
+The adapter follows the documented [Zigbee2MQTT MQTT API](https://www.zigbee2mqtt.io/guide/usage/mqtt_topics_and_messages.html).
+Automated tests simulate the bridge API; physical Zigbee2MQTT hardware has not
+yet been tested.
+
 ## What still needs manual attention?
 
 | Item | Behavior |
@@ -183,7 +247,8 @@ not open a second connection to the radio adapter.
 | Registry UUIDs in config-entry data or options | Known references block replacement; update the affected helper or integration first. |
 | Area and labels | Copied to the entity. Shared devices and their other entities are not moved. If the old bulb has no area but the new device supplies an inherited area, resolve this before replacing. |
 | Brightness, color, effects and color temperature | Available color modes and feature flags are compared when the old state is available. Scene values are not converted; check the new bulb's capabilities and Kelvin range. |
-| Zigbee2MQTT or Hue bindings and groups | Configure these in their original integration. Automatic copying supports ZHA only. |
+| Zigbee2MQTT bindings and groups | Optional copying uses cached bridge records with explicit acknowledgement. Unknown physical bindings and automatic reporting changes need manual checks. |
+| Hue and other backend bindings/groups | Configure these in their original integration. Automatic copying supports ZHA and Zigbee2MQTT only. |
 | History and statistics | Not migrated; continuous history for new hardware is not guaranteed. |
 | Assist, Alexa, Google and integration-specific exposure settings | Review manually; these may not follow the entity ID. |
 | Unloaded automations, dynamic templates and external systems | Cannot be fully inventoried and must be checked manually. |
@@ -197,9 +262,11 @@ replacement is retained. Starting another replacement replaces the previous
 undo record.
 
 Undo overwrites later changes to the recorded names, areas, icons, aliases and
-labels. For ZHA copying, it also removes bindings and group memberships added
-by this wizard, while preserving entries that already existed. Keep ZHA and
-the affected devices available during recovery.
+labels. For ZHA or Zigbee2MQTT copying, it also removes the requested bindings
+and group memberships added by this wizard, while preserving entries already
+known to the selected backend. Keep the original backend and affected devices
+available during recovery. For Zigbee2MQTT, cached discovery and automatic
+reporting side effects have the limitations described above.
 
 A persistent journal supports rollback on failure and recovery after
 interruption. An unfinished operation blocks further replacements until it is
@@ -225,6 +292,11 @@ unrelated external changes cannot be undone by the wizard. Keep your HA backup.
   the previous replacement before trying again.
 - **ZHA scan incomplete:** wake the listed remotes, check device connectivity and
   scan again. Keep the old bulb registered in ZHA.
+- **Zigbee2MQTT bridge unavailable:** verify HA MQTT is connected to the same
+  broker, check the exact base topic and allow read access to the bridge topics
+  plus publish access to `bridge/request/#`. The bridge must answer health checks.
+- **Zigbee2MQTT endpoint ambiguous:** enter numeric endpoint IDs on the connection
+  page; check the selected light channel in Zigbee2MQTT.
 - **Recovery required:** make the affected devices available, then use
   **Undo / recover last replacement** before attempting another replacement.
 - **More detail needed:** open **Settings → System → Logs** and look for
@@ -255,8 +327,10 @@ uv run ruff format --check .
 Tests exercise real HA components and configuration flows with simulated bulbs.
 ZHA tests use real Zigpy endpoints and protocol types with simulated radio
 responses, including incoming/outgoing bindings, group membership, lost
-acknowledgements and interrupted recovery. They do not modify a physical HA
-installation or Zigbee devices.
+acknowledgements and interrupted recovery. Zigbee2MQTT tests simulate retained
+bridge metadata, correlated command responses, delayed metadata updates, failures
+and crash recovery through HA's actual wizard flows. They do not modify a
+physical HA installation or Zigbee devices.
 
 For Codex cloud tasks, use the existing checkout: each task already has an
 isolated environment, so an additional Git worktree is unnecessary.

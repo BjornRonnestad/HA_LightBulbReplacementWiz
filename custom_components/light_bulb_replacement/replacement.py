@@ -3,6 +3,7 @@
 import asyncio
 import logging
 from collections.abc import Mapping
+from contextlib import AsyncExitStack
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -18,6 +19,7 @@ from homeassistant.helpers.storage import Store
 from .const import DOMAIN
 
 if TYPE_CHECKING:
+    from .z2m import Z2mPlan
     from .zha import ZhaPlan
 
 _LOGGER = logging.getLogger(__name__)
@@ -193,15 +195,19 @@ class ReplacementManager:
         zha_plan: ZhaPlan | None = None,
         *,
         accept_partial: bool = False,
+        z2m_plan: Z2mPlan | None = None,
     ) -> None:
         """Save recovery information before either rename; roll back on failure."""
-        async with self.lock:
+        async with self.lock, AsyncExitStack() as stack:
             current = self.preview(plan.old.entity_id, plan.new.entity_id)
             if current != plan:
                 raise ReplacementError("selection_changed")
             if plan.blockers:
                 raise ReplacementError("unsupported_references")
             migration = None
+            radio_key = "zha"
+            if zha_plan is not None and z2m_plan is not None:
+                raise ReplacementError("binding_backend_conflict")
             if zha_plan is not None:
                 from .zha import ZhaMigration
 
@@ -209,6 +215,16 @@ class ReplacementManager:
                 migration.validate(zha_plan, plan.old, plan.new)
                 if zha_plan.failed_reads and not accept_partial:
                     raise ReplacementError("zha_incomplete")
+            if z2m_plan is not None:
+                from .z2m import Z2mMigration
+
+                radio_key = "z2m"
+                migration = await stack.enter_async_context(
+                    Z2mMigration(self.hass, z2m_plan.base_topic)
+                )
+                migration.validate(z2m_plan, plan.old, plan.new)
+                if not accept_partial:
+                    raise ReplacementError("z2m_incomplete")
             registry = er.async_get(self.hass)
             journal = {
                 "status": "pending",
@@ -218,6 +234,8 @@ class ReplacementManager:
             }
             if zha_plan is not None:
                 journal["zha"] = zha_plan.journal()
+            if z2m_plan is not None:
+                journal["z2m"] = z2m_plan.journal()
             # If this fails, the registry is still unchanged.
             await self.store.async_save(journal)
             # Saving performs I/O: someone may have edited either entity while
@@ -234,7 +252,8 @@ class ReplacementManager:
             self.journal = journal
             try:
                 if migration is not None:
-                    await migration.async_apply(journal["zha"], self._save_journal)
+                    await migration.async_apply(journal[radio_key], self._save_journal)
+                    migration.check_network(journal[radio_key])
                     # Radio commands may take minutes. Validate the entity selection
                     # once more before touching the registry.
                     if (
@@ -326,6 +345,13 @@ class ReplacementManager:
             await ZhaMigration(self.hass).async_undo(
                 self.journal["zha"], self._save_journal
             )
+        if "z2m" in self.journal:
+            from .z2m import Z2mMigration
+
+            async with Z2mMigration(
+                self.hass, self.journal["z2m"]["base_topic"]
+            ) as z2m:
+                await z2m.async_undo(self.journal["z2m"], self._save_journal)
         self.journal["status"] = "restored"
         await self.store.async_save(self.journal)
 
