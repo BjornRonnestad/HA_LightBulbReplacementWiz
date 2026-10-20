@@ -7,7 +7,7 @@ and dashboards that reference that entity ID can then use the replacement bulb.
 The new bulb must already be added to Home Assistant through its normal
 integration. This wizard does not pair devices.
 
-Version **0.1.0** includes optional support for copying **ZHA bindings and Zigbee
+Version **0.1.1** includes optional support for copying **ZHA bindings and Zigbee
 group memberships**, with a preview, verification and undo.
 
 ## Features
