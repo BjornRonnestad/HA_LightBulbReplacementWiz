@@ -23,10 +23,11 @@
       },
       "select": {
         "title": "Select bulbs",
-        "description": "The old bulb may be offline. The new bulb must be registered, enabled and available. Groups cannot be replaced.",
+        "description": "The old bulb may be offline. The new bulb must be registered, enabled and available. Groups cannot be replaced.\n\nFor ZHA copying: wake battery remotes and keep the old bulb in ZHA during scanning. Other devices are scanned too, because incoming bindings live on the sender.",
         "data": {
           "old_entity_id": "Old bulb",
-          "new_entity_id": "New bulb"
+          "new_entity_id": "New bulb",
+          "copy_zha": "Discover and copy ZHA bindings and Zigbee groups"
         }
       },
       "confirm": {
@@ -38,10 +39,28 @@
       },
       "restore": {
         "title": "Restore last replacement",
-        "description": "Old: {old}\n\nNew: {new}\n\nJournal status: {status}\n\nRestores original IDs and settings for both bulbs, including enabled state. Later edits to those settings are overwritten. History and external changes are not restored.",
+        "description": "Old: {old}\n\nNew: {new}\n\nJournal status: {status}\n\nRestores original IDs and settings for both bulbs, including enabled state. Later edits to those settings are overwritten. History and external changes are not restored.\n\nFor ZHA copying, newly added bindings and memberships are also removed. Entries present before replacement are preserved. ZHA and the affected devices must be available.",
         "data": {
           "confirm": "Restore original settings"
         }
+      },
+      "confirm_zha": {
+        "title": "Review replacement",
+        "description": "**{old} → {archived}** (name: {name}_OLD, disabled).\n\n**{new} → {old}** (name: {name}). Area ID: {area}. Area, labels, aliases and custom icon are copied.\n\n**Resolve before replacing:** {blockers}\n\n**Different light capabilities:** {capabilities} (`capabilities` means different color/dimming/effect support). Review scenes.\n\nTake a HA backup. References to the original entity ID will target the new bulb. History is not migrated. Clean up references to the new bulb’s previous ID manually. external systems and dynamic templates cannot be verified here. Hardware device IDs and unique IDs stay unchanged. Pause affected automations during replacement; state changes will occur.\n\n**ZHA bindings to copy:**\n{zha_bindings}\n\n**Zigbee groups:** {zha_groups}\n\n**Unread / incomplete discovery:**\n{zha_missing}\n\n**Incompatible bindings (block copying):**\n{zha_blockers}\n\nOriginal bindings and memberships are retained. Existing bindings on the new bulb are preserved. New entries are read back to verify success. Undo removes only entries added by the wizard. Physical controls may affect both bulbs until the old one is disconnected. On-device Zigbee scenes and reporting configuration are not copied.",
+        "data": {
+          "confirm": "I have taken a backup and reviewed the preview",
+          "accept_partial": "I accept incomplete discovery and copying only known entries"
+        }
+      },
+      "scan": {
+        "title": "Discovering ZHA bindings"
+      },
+      "execute": {
+        "title": "Applying ZHA changes"
+      },
+      "operation_failed": {
+        "title": "ZHA operation did not complete",
+        "description": "Read the error below. Continue to the menu. If a replacement needs recovery, select Undo / recover last replacement and keep the affected devices awake."
       }
     },
     "error": {
@@ -57,7 +76,21 @@
       "storage_failed": "The recovery journal could not be saved. Check available disk space and logs.",
       "recovery_conflict": "A recorded entity is missing, moved, or its original ID is occupied. Resolve the conflict before restoring.",
       "nothing_to_restore": "There is no replacement to restore.",
-      "new_device_area": "The old bulb has no area, but the new bulb inherits one from its device. Clear the new device area first, or assign an area to the old bulb."
+      "new_device_area": "The old bulb has no area, but the new bulb inherits one from its device. Clear the new device area first, or assign an area to the old bulb.",
+      "zha_unavailable": "ZHA must be configured and running before scanning.",
+      "zha_lights_required": "Select light entities on two different physical ZHA devices. Groups and virtual lights are not supported.",
+      "zha_device_missing": "A selected ZHA device or endpoint is missing. Check ZHA and select the lights again.",
+      "zha_read_failed": "A device did not return a valid binding or group table. Wake battery devices and scan again.",
+      "zha_invalid_table": "A binding table was incomplete or changed during pagination. Wake the device and scan again.",
+      "zha_incompatible": "The replacement does not support the listed clusters or Zigbee profile. Manufacturer-specific bindings need manual setup.",
+      "zha_incomplete": "Some devices could not be read. Rescan with them awake, or explicitly accept copying only the known bindings and groups.",
+      "zha_network_changed": "The ZHA network or selected endpoints changed. No further radio changes will be made. Return to the menu and check ZHA.",
+      "zha_write_failed": "A Zigbee binding/group command failed. Automatic rollback was attempted; check the recovery status before retrying.",
+      "zha_verification_failed": "The device did not confirm the expected binding/group on read-back. Automatic rollback was attempted; check recovery before retrying."
+    },
+    "progress": {
+      "scan_zha": "Reading binding tables across the ZHA network. This can take a few minutes. Keep battery remotes awake. No bindings are changed during discovery.",
+      "execute_zha": "Copying or restoring bindings and group memberships, and checking device responses. Keep devices awake. If interrupted, use Undo / recover last replacement."
     }
   }
 }

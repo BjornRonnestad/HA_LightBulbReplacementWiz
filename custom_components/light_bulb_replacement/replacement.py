@@ -4,7 +4,7 @@ import asyncio
 import logging
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.automation import automations_with_device
 from homeassistant.components.script import scripts_with_device
@@ -16,6 +16,9 @@ from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.helpers.storage import Store
 
 from .const import DOMAIN
+
+if TYPE_CHECKING:
+    from .zha import ZhaPlan
 
 _LOGGER = logging.getLogger(__name__)
 _FIELDS = ("name", "area_id", "icon", "labels", "aliases", "disabled_by")
@@ -184,7 +187,13 @@ class ReplacementManager:
         finally:
             unsubscribe()
 
-    async def async_replace(self, plan: ReplacementPlan) -> None:
+    async def async_replace(
+        self,
+        plan: ReplacementPlan,
+        zha_plan: ZhaPlan | None = None,
+        *,
+        accept_partial: bool = False,
+    ) -> None:
         """Save recovery information before either rename; roll back on failure."""
         async with self.lock:
             current = self.preview(plan.old.entity_id, plan.new.entity_id)
@@ -192,6 +201,14 @@ class ReplacementManager:
                 raise ReplacementError("selection_changed")
             if plan.blockers:
                 raise ReplacementError("unsupported_references")
+            migration = None
+            if zha_plan is not None:
+                from .zha import ZhaMigration
+
+                migration = ZhaMigration(self.hass)
+                migration.validate(zha_plan, plan.old, plan.new)
+                if zha_plan.failed_reads and not accept_partial:
+                    raise ReplacementError("zha_incomplete")
             registry = er.async_get(self.hass)
             journal = {
                 "status": "pending",
@@ -199,6 +216,8 @@ class ReplacementManager:
                 "new": _snapshot(plan.new),
                 "archived_id": plan.archived_id,
             }
+            if zha_plan is not None:
+                journal["zha"] = zha_plan.journal()
             # If this fails, the registry is still unchanged.
             await self.store.async_save(journal)
             # Saving performs I/O: someone may have edited either entity while
@@ -214,6 +233,15 @@ class ReplacementManager:
                 raise ReplacementError("selection_changed")
             self.journal = journal
             try:
+                if migration is not None:
+                    await migration.async_apply(journal["zha"], self._save_journal)
+                    # Radio commands may take minutes. Validate the entity selection
+                    # once more before touching the registry.
+                    if (
+                        registry.async_get(plan.old.entity_id) != plan.old
+                        or registry.async_get(plan.new.entity_id) != plan.new
+                    ):
+                        raise ReplacementError("selection_changed")
                 registry.async_update_entity(
                     plan.old.entity_id,
                     new_entity_id=plan.archived_id,
@@ -250,7 +278,16 @@ class ReplacementManager:
                     _LOGGER.exception("Recovery needs attention; journal retained")
                     await self.store.async_save(self.journal)
                     raise ReplacementError("recovery_required") from err
-                raise ReplacementError("replacement_failed") from err
+                code = (
+                    err.code
+                    if isinstance(err, ReplacementError)
+                    else "replacement_failed"
+                )
+                raise ReplacementError(code) from err
+
+    async def _save_journal(self) -> None:
+        assert self.journal is not None
+        await self.store.async_save(self.journal)
 
     async def _restore(self) -> None:
         """Restore IDs only if they still belong to the recorded registry entries."""
@@ -283,6 +320,12 @@ class ReplacementManager:
             )
             if entry.entity_id != snapshot["entity_id"]:
                 await self._wait_released(entry.entity_id)
+        if "zha" in self.journal:
+            from .zha import ZhaMigration
+
+            await ZhaMigration(self.hass).async_undo(
+                self.journal["zha"], self._save_journal
+            )
         self.journal["status"] = "restored"
         await self.store.async_save(self.journal)
 

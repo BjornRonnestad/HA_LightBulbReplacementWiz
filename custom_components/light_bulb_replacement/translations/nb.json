@@ -23,10 +23,11 @@
       },
       "select": {
         "title": "Velg pærer",
-        "description": "Den gamle pæren kan være frakoblet. Den nye må være registrert, aktivert og tilgjengelig. Grupper kan ikke erstattes.",
+        "description": "Den gamle pæren kan være frakoblet. Den nye må være registrert, aktivert og tilgjengelig. Grupper kan ikke erstattes.\n\nVed ZHA-kopiering: Vekk batterifjernkontroller og behold den gamle pæren i ZHA under skanningen. Veiviseren undersøker også andre enheter, siden bindinger til pæren ligger på avsenderen.",
         "data": {
           "old_entity_id": "Gammel pære",
-          "new_entity_id": "Ny pære"
+          "new_entity_id": "Ny pære",
+          "copy_zha": "Finn og kopier ZHA-bindinger og Zigbee-grupper"
         }
       },
       "confirm": {
@@ -38,10 +39,28 @@
       },
       "restore": {
         "title": "Gjenopprett siste bytte",
-        "description": "Gammel: {old}\n\nNy: {new}\n\nJournalstatus: {status}\n\nGjenoppretter ID-er og tidligere innstillinger for begge pærer, inkludert aktivering. Senere endringer i disse innstillingene overskrives. Historikk og eksterne endringer gjenopprettes ikke.",
+        "description": "Gammel: {old}\n\nNy: {new}\n\nJournalstatus: {status}\n\nGjenoppretter ID-er og tidligere innstillinger for begge pærer, inkludert aktivering. Senere endringer i disse innstillingene overskrives. Historikk og eksterne endringer gjenopprettes ikke.\n\nVed ZHA-kopiering fjernes også nye bindinger og gruppemedlemskap som veiviseren la til. Oppføringer som fantes før byttet beholdes. ZHA og berørte enheter må være tilgjengelige.",
         "data": {
           "confirm": "Gjenopprett opprinnelige innstillinger"
         }
+      },
+      "confirm_zha": {
+        "title": "Kontroller byttet",
+        "description": "**{old} → {archived}** (navn: {name}_OLD, deaktiveres).\n\n**{new} → {old}** (navn: {name}). Rom-ID: {area}. Rom, etiketter, aliaser og eget ikon overføres.\n\n**Må rettes før bytte:** {blockers}\n\n**Ulike lysegenskaper:** {capabilities} (`capabilities` betyr ulik farge/dimming/effekter). Scener må kontrolleres.\n\nTa en HA-sikkerhetskopi. Referanser til gammel entity-ID fortsetter å peke til ny pære. Historikk flyttes ikke. Nye pærens tidligere referanser må ryddes manuelt. eksterne systemer og dynamiske maler kan ikke kontrolleres her. Gammel maskinvares device-ID og unique-ID beholdes. Stopp berørte automasjoner mens byttet pågår; det kommer tilstandsendringer.\n\n**ZHA-bindinger som kopieres:**\n{zha_bindings}\n\n**Zigbee-grupper:** {zha_groups}\n\n**Ikke lest / ufullstendig kartlegging:**\n{zha_missing}\n\n**Uforenlige bindinger (blokkerer kopiering):**\n{zha_blockers}\n\nGamle bindinger og medlemskap beholdes. Eksisterende bindinger på den nye pæren beholdes. Nye oppføringer leses tilbake for å kontrollere resultatet. Angre fjerner bare det veiviseren la til. Fysisk styring kan påvirke begge pærene inntil den gamle kobles fra. Innebygde Zigbee-scener og rapporteringsinnstillinger kopieres ikke.",
+        "data": {
+          "confirm": "Jeg har tatt sikkerhetskopi og lest forhåndsvisningen",
+          "accept_partial": "Jeg godtar at kartleggingen er ufullstendig og bare kjente oppføringer kopieres"
+        }
+      },
+      "scan": {
+        "title": "Kartlegger ZHA"
+      },
+      "execute": {
+        "title": "Utfører ZHA-endringer"
+      },
+      "operation_failed": {
+        "title": "ZHA-operasjonen ble ikke fullført",
+        "description": "Les feilen nedenfor. Fortsett tilbake til menyen. Hvis et bytte trenger gjenoppretting, velg «Angre / gjenopprett siste bytte» og hold berørte enheter våkne."
       }
     },
     "error": {
@@ -57,7 +76,21 @@
       "storage_failed": "Gjenopprettingsjournalen kunne ikke lagres. Kontroller diskplass og logg.",
       "recovery_conflict": "En registrert entitet mangler, er flyttet, eller opprinnelig ID er opptatt. Rett opp konflikten før gjenoppretting.",
       "nothing_to_restore": "Det finnes ikke noe bytte å gjenopprette.",
-      "new_device_area": "Den gamle pæren har ikke rom, men den nye arver rom fra enheten sin. Fjern rommet fra den nye enheten først, eller velg et rom for den gamle pæren."
+      "new_device_area": "Den gamle pæren har ikke rom, men den nye arver rom fra enheten sin. Fjern rommet fra den nye enheten først, eller velg et rom for den gamle pæren.",
+      "zha_unavailable": "ZHA må være konfigurert og kjøre før skanning.",
+      "zha_lights_required": "Velg lysentiteter på to forskjellige fysiske ZHA-enheter. Grupper og virtuelle lys støttes ikke.",
+      "zha_device_missing": "En valgt ZHA-enhet eller lyskanal mangler. Kontroller ZHA og velg pærene på nytt.",
+      "zha_read_failed": "En enhet svarte ikke med en gyldig bindings- eller gruppetabell. Vekk batterienheter og skann igjen.",
+      "zha_invalid_table": "En bindingstabell var ufullstendig eller endret seg under lesing. Vekk enheten og skann igjen.",
+      "zha_incompatible": "Den nye pæren støtter ikke oppførte funksjoner eller Zigbee-profil. Produsentspesifikke bindinger må settes opp manuelt.",
+      "zha_incomplete": "Noen enheter kunne ikke leses. Skann igjen mens de er våkne, eller bekreft uttrykkelig at bare kjente bindinger og grupper skal kopieres.",
+      "zha_network_changed": "ZHA-nettverket eller valgte lyskanaler er endret. Ingen flere radioendringer utføres. Gå tilbake til menyen og kontroller ZHA.",
+      "zha_write_failed": "En Zigbee-kommando for binding eller gruppe feilet. Automatisk tilbakeføring er forsøkt; kontroller gjenopprettingsstatus før nytt forsøk.",
+      "zha_verification_failed": "Enheten bekreftet ikke forventet binding eller gruppemedlemskap ved ny avlesning. Tilbakeføring er forsøkt; kontroller gjenopprettingen før nytt forsøk."
+    },
+    "progress": {
+      "scan_zha": "Leser bindingstabeller i ZHA-nettverket. Dette kan ta noen minutter. Hold batterifjernkontroller våkne. Ingen bindinger endres under kartleggingen.",
+      "execute_zha": "Kopierer eller gjenoppretter bindinger og gruppemedlemskap, og kontrollerer svarene fra enhetene. Hold enhetene våkne. Ved avbrudd, bruk «Angre / gjenopprett siste bytte»."
     }
   }
 }

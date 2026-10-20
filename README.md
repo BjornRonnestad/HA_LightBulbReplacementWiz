@@ -5,7 +5,8 @@ navn og entity-ID. Den nye pæren må først være lagt til Home Assistant gjenn
 for eksempel ZHA, Zigbee2MQTT, Hue eller Matter.
 
 Krever **Home Assistant 2026.10 eller nyere**. Testet med Core **2026.10.2**.
-Eldre versjoner støttes ikke i denne første versjonen.
+Eldre versjoner støttes ikke. ZHA-adapteren er utviklet mot ZHA **2.3.1** og
+Zigpy **2.3.0**, som følger denne HA-versjonen.
 
 ## Hva skjer ved et bytte?
 
@@ -36,6 +37,7 @@ om. Tilstandsendringer sendes under byttet og kan utløse automasjoner.
 3. Velg **Innstillinger → Enheter og tjenester → Legg til integrasjon →
    Light Bulb Replacement Wizard**.
 4. Velg **Konfigurer → Bytt pære**, og velg gammel og ny `light`-entitet.
+   For ZHA-pærer kan du også velge **Finn og kopier ZHA-bindinger og Zigbee-grupper**.
 5. Les forhåndsvisningen. Ta en HA-sikkerhetskopi og stopp berørte automasjoner
    før du bekrefter. Rett opp eventuelle blokkerende referanser først.
 6. Prøv en eksisterende gruppe, scene og automasjon. Aktiver automasjonene igjen
@@ -54,7 +56,8 @@ i stedet for å overskrive eller velge et uventet suffiks.
 | Gammel register-UUID i konfigurasjonsoppføringenes data/valg | Oppdages; byttet blokkeres. Endre referansen i den aktuelle hjelperens/integrasjonens UI. |
 | Rom og etiketter | Kopieres til entiteten. Delte enheter og deres andre entiteter flyttes ikke. Arver ny enhet rom mens gammel pære mangler rom, må dette avklares først. |
 | Farger, dimming, effekter og fargetemperatur | Fargemoduser og støttede funksjonsflagg sammenlignes når gamle pærens tilstand finnes. Scenenes verdier konverteres ikke; kontroller også Kelvin-område manuelt. |
-| Zigbee-grupper, bindinger og direkte fjernkontroller | Må settes opp i ZHA/Zigbee2MQTT/Hue. HA-grupper er noe annet. |
+| ZHA-bindinger og Zigbee-grupper | Kan kartlegges og kopieres med valgfri ZHA-støtte; se nedenfor. |
+| Bindinger/grupper via Zigbee2MQTT eller Hue | Må settes opp i den opprinnelige integrasjonen. |
 | Historikk og statistikk | Migreres ikke. Navnebyttet lover ikke sammenhengende historikk for ny maskinvare. |
 | Assist/Alexa/Google-eksponering og integrasjonsspesifikke innstillinger | Må kontrolleres manuelt; de følger ikke nødvendigvis entity-ID-en. |
 | Referanser til ny pæres tidligere entity-ID | Skrives ikke om. Disse blir ugyldige og må ryddes manuelt. |
@@ -64,6 +67,55 @@ Dette er en første versjon for entity-ID-baserte oppsett. Den garanterer ikke
 automatisk migrering av alle typer maskinvare- og tredjepartsreferanser.
 Den bytter én `light`-entitet om gangen; andre entiteter på samme enhet, som
 strømforbrukssensorer eller flere lyskanaler, behandles ikke.
+
+## Kopiere ZHA-bindinger og Zigbee-grupper
+
+Velg ZHA-kopiering etter at begge pærer er lagt til samme ZHA-nettverk.
+Skanningen leser bindingstabellene til alle enheter ZHA kjenner, inkludert
+fjernkontroller og koordinatoren. Det er nødvendig fordi en binding
+**fjernkontroll → gammel pære** ligger på fjernkontrollen, ikke på pæren.
+Alle sider av hver tabell leses, med inntil tre samtidige avlesninger og en
+tidsgrense per enhet. Dette kan ta flere minutter på et stort nettverk.
+
+Veiviseren viser direkte bindinger som peker til eller kommer fra den valgte
+lyskanalen, Zigbee-gruppene den tilhører, samt enheter som ikke kunne leses.
+Den bruker lysentitetenes faktiske ZHA-endepunkter, også når gammel og ny pære
+har forskjellige endepunktnumre. Entiteter og gruppemedlemskap for andre
+lyskanaler på samme enhet erstattes ikke.
+Bindinger med manglende klynger, ulik Zigbee-profil eller produsentspesifikke
+klynger blokkerer kopiering; funksjoner gjettes ikke.
+
+Vekk batterifjernkontroller før du skanner, og hold dem våkne gjennom kopieringen.
+En pære som er helt død kan ikke levere sin egen bindingstabell. Veiviseren kan
+likevel finne innkommende bindinger på andre enheter og hente kjente
+gruppemedlemskap fra ZHA sin mellomlagring. Slike resultater merkes som
+ufullstendige. Standardvalget er å stoppe til du enten skanner på nytt eller
+uttrykkelig godtar at bare kjente oppføringer kopieres. Et tomt resultat med
+feil betyr **ikke** at pæren var uten bindinger.
+
+Ved bekreftelse opprettes bare manglende bindinger og gruppemedlemskap på den nye
+pæren. Bindinger fra fjernkontroller til en Zigbee-gruppe trenger ingen endring;
+den nye pæren legges til samme gruppe. Protokollsvar kontrolleres, og alle
+forventede oppføringer leses tilbake før entity-ID-ene byttes.
+
+Gamle bindinger og medlemskap beholdes for å gjøre tilbakeføring mulig. Begge
+pærer kan derfor reagere på direkte fjernkontroller eller gruppemeldinger,
+selv om gammel HA-entitet er deaktivert. Koble fra den gamle pæren etter at du
+har kontrollert ny pære. Vent med å slette den fra ZHA til du ikke lenger trenger
+angremuligheten. Ved full bindingstabell kan du måtte rydde gamle oppføringer
+manuelt før kopiering.
+
+ZHA-operasjonene lagres i samme gjenopprettingsjournal som navnebyttet. Ved feil
+forsøkes tilbakeføring. Angre fjerner bare bindinger og medlemskap veiviseren
+la til; eksisterende oppføringer og opprinnelige bindinger beholdes. Tapte svar
+eller utilgjengelige enheter kan kreve ny gjenoppretting med enhetene våkne.
+Et annet Zigbee-nettverk eller en annen koordinator blokkerer radioendringer.
+
+Støtten bruker ZHA sin eksisterende gateway og Zigpy-kommandoer. Ingen egen
+tilkobling til Zigbee-adapteren opprettes. Innebygde Zigbee-scener,
+attributtrapportering, produsentspesifikke innstillinger og HA-automasjoners
+device-ID-er kopieres ikke. Dette må kontrolleres separat. Testene simulerer
+radioen; fysisk ZHA-utstyr er foreløpig ikke testet.
 
 ## Angre og gjenoppretting
 
@@ -101,4 +153,6 @@ uv run ruff format --check .
 Testene starter ekte Home Assistant-komponenter med to simulerte lyspærer.
 De prøver registerbytte, fysiske identiteter, `light.turn_on`, eksisterende
 grupper/scener/automasjoner, brukerflyten, feiltilbakeføring og journalgjenoppretting.
+ZHA-testene bruker ekte Zigpy-endepunkter og protokolltyper med simulert radio,
+inkludert inn-/utgående bindinger, gruppemedlemskap, tapte svar og avbrudd.
 Ingen ekte HA-installasjon eller fysiske pærer er endret av testene.
