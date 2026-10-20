@@ -1,0 +1,63 @@
+{
+  "title": "Light Bulb Replacement Wizard",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Light bulb replacement",
+        "description": "First add the new bulb to Home Assistant using its normal integration. After setup, open **Configure** to replace a bulb or restore the last replacement."
+      }
+    },
+    "abort": {
+      "already_configured": "The wizard is already installed. Use Configure on the integration.",
+      "single_instance_allowed": "The wizard is already installed. Use Configure on the integration."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Bulb replacement",
+        "menu_options": {
+          "select": "Replace bulb",
+          "restore": "Undo / recover last replacement"
+        }
+      },
+      "select": {
+        "title": "Select bulbs",
+        "description": "The old bulb may be offline. The new bulb must be registered, enabled and available. Groups cannot be replaced.",
+        "data": {
+          "old_entity_id": "Old bulb",
+          "new_entity_id": "New bulb"
+        }
+      },
+      "confirm": {
+        "title": "Review replacement",
+        "description": "**{old} → {archived}** (name: {name}_OLD, disabled).\n\n**{new} → {old}** (name: {name}). Area ID: {area}. Area, labels, aliases and custom icon are copied.\n\n**Resolve before replacing:** {blockers}\n\n**Different light capabilities:** {capabilities} (`capabilities` means different color/dimming/effect support). Review scenes.\n\nTake a HA backup. References to the original entity ID will target the new bulb. History is not migrated. Clean up references to the new bulb’s previous ID manually. Zigbee bindings/groups, external systems and dynamic templates cannot be verified here. Hardware device IDs and unique IDs stay unchanged. Pause affected automations during replacement; state changes will occur.",
+        "data": {
+          "confirm": "I have taken a backup and reviewed the preview"
+        }
+      },
+      "restore": {
+        "title": "Restore last replacement",
+        "description": "Old: {old}\n\nNew: {new}\n\nJournal status: {status}\n\nRestores original IDs and settings for both bulbs, including enabled state. Later edits to those settings are overwritten. History and external changes are not restored.",
+        "data": {
+          "confirm": "Restore original settings"
+        }
+      }
+    },
+    "error": {
+      "same_entity": "Select two different lights.",
+      "invalid_light": "Select two registered lights (not groups). The new light must be enabled.",
+      "new_unavailable": "The new light must be available in Home Assistant first.",
+      "archive_exists": "The proposed _old entity ID is already in use. Rename that entity first.",
+      "recovery_required": "An operation needs recovery. Return to the menu and restore the last replacement. Check the logs if recovery fails.",
+      "selection_changed": "The selection or its settings changed. Close this dialog and select the lights again.",
+      "unsupported_references": "Resolve the listed device/registry references before replacing. These do not follow an entity ID.",
+      "confirmation_required": "Confirm that you have read the preview and taken a Home Assistant backup.",
+      "replacement_failed": "Replacement failed. Original registry settings have been restored. Check the logs.",
+      "storage_failed": "The recovery journal could not be saved. Check available disk space and logs.",
+      "recovery_conflict": "A recorded entity is missing, moved, or its original ID is occupied. Resolve the conflict before restoring.",
+      "nothing_to_restore": "There is no replacement to restore.",
+      "new_device_area": "The old bulb has no area, but the new bulb inherits one from its device. Clear the new device area first, or assign an area to the old bulb."
+    }
+  }
+}
