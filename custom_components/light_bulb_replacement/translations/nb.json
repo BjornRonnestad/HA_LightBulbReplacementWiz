@@ -23,11 +23,12 @@
       },
       "select": {
         "title": "Select bulbs",
-        "description": "The old bulb may be offline. The new bulb must be registered, enabled and available. Groups cannot be replaced.\n\nFor ZHA copying: wake battery remotes and keep the old bulb in ZHA during scanning. Other devices are scanned too, because incoming bindings live on the sender.",
+        "description": "The old bulb may be offline. The new bulb must be registered, enabled and available. Groups cannot be replaced.\n\nFor ZHA copying: wake battery remotes and keep the old bulb in ZHA during scanning. Other devices are scanned too, because incoming bindings live on the sender.\n\nTo copy Zigbee configuration, select one backend only. For Zigbee2MQTT, both bulbs must belong to the same bridge connected to Home Assistant MQTT.",
         "data": {
           "old_entity_id": "Old bulb",
           "new_entity_id": "New bulb",
-          "copy_zha": "Discover and copy ZHA bindings and Zigbee groups"
+          "copy_zha": "Discover and copy ZHA bindings and Zigbee groups",
+          "copy_z2m": "Discover and copy Zigbee2MQTT bindings and Zigbee groups"
         }
       },
       "confirm": {
@@ -39,7 +40,7 @@
       },
       "restore": {
         "title": "Restore last replacement",
-        "description": "Old: {old}\n\nNew: {new}\n\nJournal status: {status}\n\nRestores original IDs and settings for both bulbs, including enabled state. Later edits to those settings are overwritten. History and external changes are not restored.\n\nFor ZHA copying, newly added bindings and memberships are also removed. Entries present before replacement are preserved. ZHA and the affected devices must be available.",
+        "description": "Old: {old}\n\nNew: {new}\n\nJournal status: {status}\n\nRestores original IDs and settings for both bulbs, including enabled state. Later edits to those settings are overwritten. History and external changes are not restored.\n\nFor Zigbee copying, newly added bindings and memberships are also removed. Entries present before replacement are preserved. The selected backend and affected devices must be available. For Zigbee2MQTT, MQTT must be connected to the original bridge. Undo does not restore reporting changes or coordinator bindings automatically configured by Zigbee2MQTT.",
         "data": {
           "confirm": "Restore original settings"
         }
@@ -56,11 +57,31 @@
         "title": "Discovering ZHA bindings"
       },
       "execute": {
-        "title": "Applying ZHA changes"
+        "title": "Applying Zigbee changes"
       },
       "operation_failed": {
-        "title": "ZHA operation did not complete",
+        "title": "Zigbee operation did not complete",
         "description": "Read the error below. Continue to the menu. If a replacement needs recovery, select Undo / recover last replacement and keep the affected devices awake."
+      },
+      "z2m": {
+        "title": "Zigbee2MQTT connection",
+        "description": "Use the MQTT base topic from your Zigbee2MQTT configuration (normally `zigbee2mqtt`). Home Assistant must already be connected to the same MQTT broker. No broker credentials are needed here.\n\nLeave endpoint fields empty for automatic selection. If a device has several light channels and the wizard cannot identify the selected channel, enter the corresponding numeric endpoint from Zigbee2MQTT.\n\nDiscovery uses cached bridge records and may miss unrecorded bindings. No bindings are changed during discovery.",
+        "data": {
+          "base_topic": "Zigbee2MQTT MQTT base topic",
+          "old_endpoint": "Old bulb endpoint (optional)",
+          "new_endpoint": "New bulb endpoint (optional)"
+        }
+      },
+      "confirm_z2m": {
+        "title": "Review Zigbee2MQTT replacement",
+        "description": "**{old} → {archived}** (name: {name}_OLD, disabled).\n\n**{new} → {old}** (name: {name}). Area ID: {area}. Area, labels, aliases and custom icon are copied.\n\n**Resolve before replacing:** {blockers}\n\n**Different light capabilities:** {capabilities} (`capabilities` means different color/dimming/effect support). Review scenes.\n\nTake a Home Assistant backup. References to the original entity ID will target the new bulb. History is not migrated. Clean up references to the new bulb’s previous ID manually. External systems and dynamic templates cannot be verified here. Hardware device IDs and unique IDs stay unchanged. Pause affected automations during replacement; state changes will occur.\n\n**Zigbee2MQTT bindings to copy:**\n{z2m_bindings}\n\n**Zigbee groups:** {z2m_groups}\n\n**Discovery limitations:**\n{z2m_missing}\n\n**Incompatible bindings (block copying):**\n{z2m_blockers}\n\nThis preview uses Zigbee2MQTT's cached records, not a live read of device binding tables. Explicitly accept this limitation before copying. Each write requires a matching bridge response and updated bridge records. This does not independently verify the device's binding table.\n\nOriginal entries are retained. Undo removes the requested entries added by the wizard and preserves entries already recorded on the new bulb. Zigbee2MQTT may also configure reporting or coordinator bindings as a side effect of its normal bind/group commands; those side effects are not undone. On-device Zigbee scenes are not copied. Wake battery remotes and keep the old bulb registered for recovery.",
+        "data": {
+          "confirm": "I have taken a backup and reviewed the preview",
+          "accept_partial": "I accept cached discovery and copying only the entries known to Zigbee2MQTT"
+        }
+      },
+      "scan_z2m": {
+        "title": "Discovering Zigbee2MQTT bindings"
       }
     },
     "error": {
@@ -86,11 +107,27 @@
       "zha_incomplete": "Some devices could not be read. Rescan with them awake, or explicitly accept copying only the known bindings and groups.",
       "zha_network_changed": "The ZHA network or selected endpoints changed. No further radio changes will be made. Return to the menu and check ZHA.",
       "zha_write_failed": "A Zigbee binding/group command failed. Automatic rollback was attempted; check the recovery status before retrying.",
-      "zha_verification_failed": "The device did not confirm the expected binding/group on read-back. Automatic rollback was attempted; check recovery before retrying."
+      "zha_verification_failed": "The device did not confirm the expected binding/group on read-back. Automatic rollback was attempted; check recovery before retrying.",
+      "binding_backend_conflict": "Select either ZHA or Zigbee2MQTT copying, not both.",
+      "z2m_unavailable": "Home Assistant MQTT must be connected and the selected Zigbee2MQTT bridge must be online.",
+      "z2m_invalid_topic": "Enter an exact MQTT base topic without leading/trailing slashes, whitespace or wildcards.",
+      "z2m_invalid_data": "Zigbee2MQTT bridge metadata is missing or invalid. Check the bridge version, MQTT permissions and retained bridge topics.",
+      "z2m_timeout": "Zigbee2MQTT did not respond in time. Check the MQTT base topic, bridge connection and device availability. If a write was started, review recovery before retrying.",
+      "z2m_device_missing": "A selected Zigbee2MQTT device or endpoint is missing. Keep both bulbs registered on the selected bridge.",
+      "z2m_lights_required": "Select MQTT-discovered lights on two different physical devices on this Zigbee2MQTT bridge. Groups, other MQTT lights and cross-network copying are not supported.",
+      "z2m_endpoint_required": "The selected light channel cannot be mapped safely. Return to bulb selection, choose Zigbee2MQTT copying again and enter the correct numeric endpoint for each bulb.",
+      "z2m_incompatible": "The replacement lacks a required cluster or uses an unsupported binding. Resolve the listed bindings manually before replacing.",
+      "z2m_incomplete": "Explicitly accept that discovery uses cached Zigbee2MQTT records and copies only known entries.",
+      "z2m_network_changed": "The Zigbee2MQTT bridge, coordinator or network changed. No further writes will be sent. Restore the original bridge before recovery.",
+      "z2m_write_failed": "Zigbee2MQTT rejected a command or did not confirm the requested binding/group operation. Rollback was attempted; review recovery before retrying.",
+      "z2m_verification_failed": "Updated Zigbee2MQTT bridge records did not confirm the requested change. Rollback was attempted; review recovery before retrying.",
+      "z2m_read_failed": "Zigbee2MQTT discovery failed. Check MQTT connectivity, retained bridge records and Home Assistant logs."
     },
     "progress": {
       "scan_zha": "Reading binding tables across the ZHA network. This can take a few minutes. Keep battery remotes awake. No bindings are changed during discovery.",
-      "execute_zha": "Copying or restoring bindings and group memberships, and checking device responses. Keep devices awake. If interrupted, use Undo / recover last replacement."
+      "execute_zha": "Copying or restoring bindings and group memberships, and checking device responses. Keep devices awake. If interrupted, use Undo / recover last replacement.",
+      "scan_z2m": "Reading cached Zigbee2MQTT bridge records and checking that the bridge responds. No device binding tables are scanned and no bindings are changed.",
+      "execute_z2m": "Copying or restoring Zigbee2MQTT bindings and groups, checking command responses and updated bridge records. Keep affected devices awake. If interrupted, use Undo / recover last replacement."
     }
   }
 }

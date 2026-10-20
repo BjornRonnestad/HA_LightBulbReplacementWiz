@@ -13,6 +13,7 @@ from .const import CONF_CONFIRM, CONF_NEW, CONF_OLD, DOMAIN, TITLE
 from .replacement import ReplacementError, ReplacementManager, ReplacementPlan
 
 if TYPE_CHECKING:
+    from .z2m import Z2mMigration, Z2mPlan
     from .zha import ZhaMigration, ZhaPlan
 
 _LOGGER = logging.getLogger(__name__)
@@ -47,7 +48,10 @@ class ReplacementOptionsFlow(config_entries.OptionsFlow):
         super().__init__()
         self._plan: ReplacementPlan | None = None
         self._zha_plan: ZhaPlan | None = None
-        self._migration: ZhaMigration | None = None
+        self._z2m_plan: Z2mPlan | None = None
+        self._backend = "zha"
+        self._z2m_settings: dict[str, Any] = {}
+        self._migration: ZhaMigration | Z2mMigration | None = None
         self._scan_task: asyncio.Task | None = None
         self._operation_task: asyncio.Task | None = None
         self._progress_error: str | None = None
@@ -71,8 +75,16 @@ class ReplacementOptionsFlow(config_entries.OptionsFlow):
                     user_input[CONF_OLD], user_input[CONF_NEW]
                 )
                 self._zha_plan = None
+                self._z2m_plan = None
+                self._progress_error = None
                 self._scan_task = None
+                if user_input.get("copy_zha") and user_input.get("copy_z2m"):
+                    raise ReplacementError("binding_backend_conflict")
+                if user_input.get("copy_z2m"):
+                    self._backend = "z2m"
+                    return await self.async_step_z2m()
                 if user_input.get("copy_zha"):
+                    self._backend = "zha"
                     if (
                         self._plan.old.platform != "zha"
                         or self._plan.new.platform != "zha"
@@ -97,38 +109,97 @@ class ReplacementOptionsFlow(config_entries.OptionsFlow):
                         selector.EntitySelectorConfig(domain="light")
                     ),
                     vol.Optional("copy_zha", default=False): selector.BooleanSelector(),
+                    vol.Optional("copy_z2m", default=False): selector.BooleanSelector(),
                 }
             ),
             errors=errors,
         )
 
+    async def async_step_z2m(self, user_input=None) -> config_entries.ConfigFlowResult:
+        errors = {}
+        if user_input is not None:
+            try:
+                from .z2m import Z2mMigration
+
+                self._migration = Z2mMigration(
+                    self.hass, user_input.get("base_topic", "zigbee2mqtt")
+                )
+                for key in ("old_endpoint", "new_endpoint"):
+                    if key in user_input and (
+                        not isinstance(user_input[key], (int, float))
+                        or not 1 <= user_input[key] <= 240
+                        or int(user_input[key]) != user_input[key]
+                    ):
+                        raise ReplacementError("z2m_endpoint_required")
+                self._z2m_settings = {
+                    key: int(user_input[key])
+                    for key in ("old_endpoint", "new_endpoint")
+                    if key in user_input
+                }
+                return await self.async_step_scan_z2m()
+            except ReplacementError as err:
+                errors["base"] = err.code
+        return self.async_show_form(
+            step_id="z2m",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        "base_topic", default="zigbee2mqtt"
+                    ): selector.TextSelector(),
+                    **{
+                        vol.Optional(key): selector.NumberSelector(
+                            selector.NumberSelectorConfig(
+                                min=1,
+                                max=240,
+                                step=1,
+                                mode=selector.NumberSelectorMode.BOX,
+                            )
+                        )
+                        for key in ("old_endpoint", "new_endpoint")
+                    },
+                }
+            ),
+            errors=errors,
+        )
+
+    async def async_step_scan_z2m(self, user_input=None):
+        return await self.async_step_scan(user_input)
+
     async def async_step_scan(self, user_input=None) -> config_entries.ConfigFlowResult:
         assert self._plan is not None and self._migration is not None
         if self._scan_task is None:
+            settings = self._z2m_settings if self._backend == "z2m" else {}
             self._scan_task = self.hass.async_create_task(
-                self._migration.async_scan(self._plan.old, self._plan.new),
-                "Scan ZHA bindings",
+                self._migration.async_scan(self._plan.old, self._plan.new, **settings),
+                "Discover Zigbee bindings",
             )
         if not self._scan_task.done():
             return self.async_show_progress(
-                step_id="scan",
-                progress_action="scan_zha",
+                step_id="scan_z2m" if self._backend == "z2m" else "scan",
+                progress_action=f"scan_{self._backend}",
                 progress_task=self._scan_task,
             )
         try:
-            self._zha_plan = self._scan_task.result()
+            radio_plan = self._scan_task.result()
         except ReplacementError as err:
             self._progress_error = err.code
         except Exception:
-            _LOGGER.exception("ZHA discovery failed")
-            self._progress_error = "zha_read_failed"
+            _LOGGER.exception("Zigbee binding discovery failed")
+            self._progress_error = f"{self._backend}_read_failed"
         else:
-            return self.async_show_progress_done(next_step_id="confirm_zha")
+            if self._backend == "z2m":
+                self._z2m_plan = radio_plan
+            else:
+                self._zha_plan = radio_plan
+            return self.async_show_progress_done(
+                next_step_id=f"confirm_{self._backend}"
+            )
         return self.async_show_progress_done(next_step_id="operation_failed")
 
-    async def async_step_confirm_zha(
-        self, user_input=None
-    ) -> config_entries.ConfigFlowResult:
+    async def async_step_confirm_zha(self, user_input=None):
+        return await self.async_step_confirm(user_input)
+
+    async def async_step_confirm_z2m(self, user_input=None):
         return await self.async_step_confirm(user_input)
 
     async def async_step_confirm(
@@ -136,25 +207,27 @@ class ReplacementOptionsFlow(config_entries.OptionsFlow):
     ) -> config_entries.ConfigFlowResult:
         assert self._plan is not None
         plan = self._plan
+        radio_plan = self._zha_plan or self._z2m_plan
         errors = {}
         if user_input is not None:
             if not user_input.get(CONF_CONFIRM):
                 errors["base"] = "confirmation_required"
             elif (
-                self._zha_plan
-                and self._zha_plan.failed_reads
+                radio_plan
+                and radio_plan.failed_reads
                 and not user_input.get("accept_partial")
             ):
-                errors["base"] = "zha_incomplete"
+                errors["base"] = f"{self._backend}_incomplete"
             else:
-                if self._zha_plan is not None:
+                if radio_plan is not None:
                     self._operation_task = self.hass.async_create_task(
                         self.manager.async_replace(
                             plan,
                             self._zha_plan,
                             accept_partial=user_input.get("accept_partial", False),
+                            z2m_plan=self._z2m_plan,
                         ),
-                        "Copy ZHA configuration and replace light",
+                        "Copy Zigbee configuration and replace light",
                     )
                     return await self.async_step_execute()
                 try:
@@ -169,7 +242,7 @@ class ReplacementOptionsFlow(config_entries.OptionsFlow):
         fields = {
             vol.Required(CONF_CONFIRM, default=False): selector.BooleanSelector(),
         }
-        if self._zha_plan and self._zha_plan.failed_reads:
+        if radio_plan and radio_plan.failed_reads:
             fields[vol.Required("accept_partial", default=False)] = (
                 selector.BooleanSelector()
             )
@@ -182,23 +255,24 @@ class ReplacementOptionsFlow(config_entries.OptionsFlow):
             "blockers": ", ".join(plan.blockers) or "—",
             "capabilities": ", ".join(plan.warnings) or "—",
         }
-        if self._zha_plan:
+        if radio_plan:
             placeholders.update(
                 {
-                    "zha_bindings": "\n".join(
-                        b.describe() for b in self._zha_plan.bindings
+                    f"{self._backend}_bindings": "\n".join(
+                        b.describe() for b in radio_plan.bindings
                     )
                     or "—",
-                    "zha_groups": ", ".join(
-                        f"0x{group:04x}" for group in self._zha_plan.groups
+                    f"{self._backend}_groups": ", ".join(
+                        f"0x{group:04x}" for group in radio_plan.groups
                     )
                     or "—",
-                    "zha_missing": "\n".join(self._zha_plan.failed_reads) or "—",
-                    "zha_blockers": "\n".join(self._zha_plan.blockers) or "—",
+                    f"{self._backend}_missing": "\n".join(radio_plan.failed_reads)
+                    or "—",
+                    f"{self._backend}_blockers": "\n".join(radio_plan.blockers) or "—",
                 }
             )
         return self.async_show_form(
-            step_id="confirm_zha" if self._zha_plan else "confirm",
+            step_id=f"confirm_{self._backend}" if radio_plan else "confirm",
             data_schema=vol.Schema(fields),
             description_placeholders=placeholders,
             errors=errors,
@@ -211,7 +285,7 @@ class ReplacementOptionsFlow(config_entries.OptionsFlow):
         if not self._operation_task.done():
             return self.async_show_progress(
                 step_id="execute",
-                progress_action="execute_zha",
+                progress_action=f"execute_{self._backend}",
                 progress_task=self._operation_task,
             )
         try:
@@ -219,7 +293,7 @@ class ReplacementOptionsFlow(config_entries.OptionsFlow):
         except ReplacementError as err:
             self._progress_error = err.code
         except Exception:
-            _LOGGER.exception("ZHA replacement or recovery failed")
+            _LOGGER.exception("Zigbee replacement or recovery failed")
             self._progress_error = "recovery_required"
         else:
             return self.async_show_progress_done(next_step_id="operation_done")
@@ -249,9 +323,12 @@ class ReplacementOptionsFlow(config_entries.OptionsFlow):
             if not user_input.get(CONF_CONFIRM):
                 errors["base"] = "confirmation_required"
             else:
-                if self.manager.journal and "zha" in self.manager.journal:
+                if self.manager.journal and any(
+                    key in self.manager.journal for key in ("zha", "z2m")
+                ):
+                    self._backend = "z2m" if "z2m" in self.manager.journal else "zha"
                     self._operation_task = self.hass.async_create_task(
-                        self.manager.async_restore(), "Restore ZHA replacement"
+                        self.manager.async_restore(), "Restore Zigbee replacement"
                     )
                     return await self.async_step_execute()
                 try:
