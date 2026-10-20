@@ -1,0 +1,63 @@
+{
+  "title": "Light Bulb Replacement Wizard",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Veiviser for pærebytte",
+        "description": "Legg først den nye pæren til Home Assistant med dens vanlige integrasjon. Etter oppsett: åpne **Konfigurer** for å bytte pære eller gjenopprette siste bytte."
+      }
+    },
+    "abort": {
+      "already_configured": "Veiviseren er allerede installert. Bruk Konfigurer på integrasjonen.",
+      "single_instance_allowed": "Veiviseren er allerede installert. Bruk Konfigurer på integrasjonen."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Pærebytte",
+        "menu_options": {
+          "select": "Bytt pære",
+          "restore": "Angre / gjenopprett siste bytte"
+        }
+      },
+      "select": {
+        "title": "Velg pærer",
+        "description": "Den gamle pæren kan være frakoblet. Den nye må være registrert, aktivert og tilgjengelig. Grupper kan ikke erstattes.",
+        "data": {
+          "old_entity_id": "Gammel pære",
+          "new_entity_id": "Ny pære"
+        }
+      },
+      "confirm": {
+        "title": "Kontroller byttet",
+        "description": "**{old} → {archived}** (navn: {name}_OLD, deaktiveres).\n\n**{new} → {old}** (navn: {name}). Rom-ID: {area}. Rom, etiketter, aliaser og eget ikon overføres.\n\n**Må rettes før bytte:** {blockers}\n\n**Ulike lysegenskaper:** {capabilities} (`capabilities` betyr ulik farge/dimming/effekter). Scener må kontrolleres.\n\nTa en HA-sikkerhetskopi. Referanser til gammel entity-ID fortsetter å peke til ny pære. Historikk flyttes ikke. Nye pærens tidligere referanser må ryddes manuelt. Zigbee-bindinger, Zigbee-grupper, eksterne systemer og dynamiske maler kan ikke kontrolleres her. Gammel maskinvares device-ID og unique-ID beholdes. Stopp berørte automasjoner mens byttet pågår; det kommer tilstandsendringer.",
+        "data": {
+          "confirm": "Jeg har tatt sikkerhetskopi og lest forhåndsvisningen"
+        }
+      },
+      "restore": {
+        "title": "Gjenopprett siste bytte",
+        "description": "Gammel: {old}\n\nNy: {new}\n\nJournalstatus: {status}\n\nGjenoppretter ID-er og tidligere innstillinger for begge pærer, inkludert aktivering. Senere endringer i disse innstillingene overskrives. Historikk og eksterne endringer gjenopprettes ikke.",
+        "data": {
+          "confirm": "Gjenopprett opprinnelige innstillinger"
+        }
+      }
+    },
+    "error": {
+      "same_entity": "Velg to forskjellige lys.",
+      "invalid_light": "Velg to registrerte lys, ikke grupper. Det nye lyset må være aktivert.",
+      "new_unavailable": "Den nye pæren må være tilgjengelig i Home Assistant først.",
+      "archive_exists": "Foreslått entity-ID med _old er allerede i bruk. Gi den andre entiteten nytt navn først.",
+      "recovery_required": "Et bytte trenger gjenoppretting. Gå tilbake til menyen og gjenopprett siste bytte. Se loggen dersom det feiler.",
+      "selection_changed": "Valget eller innstillingene er endret. Lukk dialogen og velg pærene på nytt.",
+      "unsupported_references": "Rett opp referansene til enheter/register-ID-er i listen før byttet. De følger ikke entity-ID-en.",
+      "confirmation_required": "Bekreft at du har lest forhåndsvisningen og tatt sikkerhetskopi av Home Assistant.",
+      "replacement_failed": "Byttet feilet. Opprinnelige registerinnstillinger er gjenopprettet. Se loggen.",
+      "storage_failed": "Gjenopprettingsjournalen kunne ikke lagres. Kontroller diskplass og logg.",
+      "recovery_conflict": "En registrert entitet mangler, er flyttet, eller opprinnelig ID er opptatt. Rett opp konflikten før gjenoppretting.",
+      "nothing_to_restore": "Det finnes ikke noe bytte å gjenopprette.",
+      "new_device_area": "Den gamle pæren har ikke rom, men den nye arver rom fra enheten sin. Fjern rommet fra den nye enheten først, eller velg et rom for den gamle pæren."
+    }
+  }
+}
