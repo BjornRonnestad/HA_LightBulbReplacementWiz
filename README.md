@@ -1,147 +1,240 @@
 # Light Bulb Replacement Wizard
 
-En lokal Home Assistant-integrasjon som lar en ny pære overta den gamle pærens
-navn og entity-ID. Den nye pæren må først være lagt til Home Assistant gjennom
-for eksempel ZHA, Zigbee2MQTT, Hue eller Matter.
+A custom Home Assistant integration that helps you replace a light bulb while
+keeping its existing name and entity ID. Groups, scenes, automations, scripts
+and dashboards that reference that entity ID can then use the replacement bulb.
 
-Krever **Home Assistant 2026.10 eller nyere**. Testet med Core **2026.10.2**.
-Eldre versjoner støttes ikke. ZHA-adapteren er utviklet mot ZHA **2.3.1** og
-Zigpy **2.3.0**, som følger denne HA-versjonen.
+The new bulb must already be added to Home Assistant through its normal
+integration. This wizard does not pair devices.
 
-## Hva skjer ved et bytte?
+Version **0.1.0** includes optional support for copying **ZHA bindings and Zigbee
+group memberships**, with a preview, verification and undo.
 
-Eksempel: gammel pære er `light.stue`, ny pære er `light.ny_paere`.
+## Features
 
-1. Gammel pære får entity-ID `light.stue_old` og visningsnavn `Stue_OLD`.
-2. Ny pære overtar `light.stue` og visningsnavnet `Stue`.
-3. Den nye entiteten overtar effektivt rom, aliaser og egendefinert ikon.
-   Gamle entitets-/enhetsetiketter legges til den nye entitetens etiketter.
-4. Gamle entitetens egne etiketter og aliaser fjernes. Entiteten deaktiveres,
-   men slettes ikke. Den fysiske pæren fjernes ikke fra nettverket.
+- Select the old and new bulbs using Home Assistant entity pickers.
+- Rename the old bulb with an `_OLD` display-name suffix and an `_old` entity-ID
+  suffix, then disable its HA entity without deleting it.
+- Give the new bulb the original name and entity ID.
+- Transfer the effective area, aliases and custom icon. Add the old entity's and
+  device's labels to the new entity's existing labels.
+- Detect ID collisions and known device-ID or registry-UUID references that need
+  manual changes.
+- Optionally discover and copy compatible ZHA bindings and Zigbee groups.
+- Undo the last replacement or recover an interrupted operation.
+- English and Norwegian Bokmål interface translations.
 
-HA entity-ID-er må være små bokstaver, derfor `_old` i ID-en og `_OLD` i navnet.
-Pærenes **unique-ID, device-ID, register-UUID og opprinnelige integrasjoner
-beholdes**. Dette lar den nye pæren fortsatt styres av riktig maskinvareintegrasjon.
+## Requirements
 
-Grupper, scener, automasjoner, skript og dashboards med eksplisitte referanser
-til `light.stue` bruker dermed den nye pæren. Konfigurasjonen deres skrives ikke
-om. Tilstandsendringer sendes under byttet og kan utløse automasjoner.
+- **Home Assistant 2026.10 or newer.** Tested with Core **2026.10.2**.
+- Two registered `light` entities. Light groups cannot be selected as bulbs.
+- The new bulb must be enabled and available. The old bulb may be offline, but
+  its entity must still exist in Home Assistant.
+- For binding and group copying, both bulbs must be on the same running **ZHA**
+  network. The adapter was developed against ZHA **2.3.1** and Zigpy **2.3.0**.
 
-## Installasjon og bruk
+The initial release has automated tests with simulated bulbs and radio responses.
+It has **not yet been tested with physical Zigbee hardware**.
 
-1. Kopier mappen `custom_components/light_bulb_replacement` til
-   `/config/custom_components/light_bulb_replacement` på HA-installasjonen.
-   Repositoriet er også strukturert for å legges til som en egendefinert
-   integrasjon i HACS; det er ikke publisert i HACS-standardkatalogen.
-2. Start Home Assistant på nytt.
-3. Velg **Innstillinger → Enheter og tjenester → Legg til integrasjon →
-   Light Bulb Replacement Wizard**.
-4. Velg **Konfigurer → Bytt pære**, og velg gammel og ny `light`-entitet.
-   For ZHA-pærer kan du også velge **Finn og kopier ZHA-bindinger og Zigbee-grupper**.
-5. Les forhåndsvisningen. Ta en HA-sikkerhetskopi og stopp berørte automasjoner
-   før du bekrefter. Rett opp eventuelle blokkerende referanser først.
-6. Prøv en eksisterende gruppe, scene og automasjon. Aktiver automasjonene igjen
-   når du har kontrollert resultatet.
+## Installation
 
-Den gamle pæren kan være utilgjengelig. Den nye må være aktivert og tilgjengelig.
-Lysgrupper kan ikke velges som pærer. Ved opptatt `_old`-ID stopper veiviseren
-i stedet for å overskrive eller velge et uventet suffiks.
+### HACS: custom repository
 
-## Referanser og begrensninger
+This integration is not listed in the default HACS catalog. If you already have
+[HACS](https://www.hacs.xyz/) installed:
 
-| Referanse / egenskap | Håndtering |
+[Open this repository in HACS](https://my.home-assistant.io/redirect/hacs_repository/?owner=BjornRonnestad&repository=HA_LightBulbReplacementWiz&category=integration),
+or add it manually:
+
+1. Open **HACS** in Home Assistant.
+2. Open the three-dot menu and select **Custom repositories**.
+3. Enter this repository URL:
+
+   ```text
+   https://github.com/BjornRonnestad/HA_LightBulbReplacementWiz
+   ```
+
+4. Select **Integration** as the type and click **Add**.
+5. Find **Light Bulb Replacement Wizard** in HACS and download it.
+6. **Restart Home Assistant.** Reloading YAML is not sufficient.
+7. Follow [Add the integration](#add-the-integration) below.
+
+### Manual installation
+
+1. [Download the repository ZIP](https://github.com/BjornRonnestad/HA_LightBulbReplacementWiz/archive/refs/heads/main.zip)
+   and extract it.
+2. Copy the `custom_components/light_bulb_replacement` folder into your Home
+   Assistant configuration directory. Copy only this integration folder, not
+   the entire repository. The resulting layout must be:
+
+   ```text
+   config/
+   └── custom_components/
+       └── light_bulb_replacement/
+           ├── __init__.py
+           ├── config_flow.py
+           ├── const.py
+           ├── manifest.json
+           ├── replacement.py
+           ├── strings.json
+           ├── translations/
+           │   ├── en.json
+           │   └── nb.json
+           └── zha.py
+   ```
+
+   On Home Assistant OS, the configuration directory is normally `/config`.
+   Create `custom_components` if it does not exist.
+3. **Restart Home Assistant.**
+4. Follow the setup instructions below.
+
+## Add the integration
+
+1. Open **Settings → Devices & services**.
+2. Click **Add integration**.
+3. Search for **Light Bulb Replacement Wizard** and complete the setup.
+
+No YAML configuration is required. Add the wizard once and use **Configure** for
+subsequent replacements.
+
+After installing the files and restarting HA, you can also
+[open the integration setup directly](https://my.home-assistant.io/redirect/config_flow_start/?domain=light_bulb_replacement).
+
+## Replace a bulb
+
+1. Add the replacement bulb to Home Assistant using ZHA, Zigbee2MQTT, Hue, Matter
+   or its usual integration. Check that you can control it.
+2. Open **Settings → Devices & services → Light Bulb Replacement Wizard →
+   Configure**.
+3. Select **Replace bulb**.
+4. In **Old bulb**, select the `light` entity you want to replace.
+5. In **New bulb**, select the replacement `light` entity. These must be two
+   different entities.
+6. For two ZHA bulbs, optionally enable **Discover and copy ZHA bindings and
+   Zigbee groups**. Wake battery remotes before starting the scan.
+7. Review the proposed changes and resolve any blocking references. Take a Home
+   Assistant backup and pause affected automations before confirming: state
+   changes during replacement may trigger them.
+8. Confirm the replacement. Test an existing group, scene and automation, then
+   re-enable the automations you paused. If you copied bindings, test the
+   physical controls as well.
+
+### Example
+
+| Bulb | Before | After |
+| --- | --- | --- |
+| Old bulb | `light.living_room` | `light.living_room_old`, disabled |
+| New bulb | `light.new_bulb` | `light.living_room` |
+
+The old display name becomes `Living room_OLD`; the new bulb takes the original
+`Living room` name. Entity IDs use lowercase `_old` because HA entity IDs must
+be lowercase. If the proposed archive ID already exists, the wizard stops.
+
+Hardware **unique IDs, device IDs, registry UUIDs and owning integrations remain
+unchanged**. Existing references to `light.living_room` target the new bulb;
+references to `light.new_bulb` must be cleaned up manually.
+
+## ZHA bindings and Zigbee groups
+
+A binding from a remote to a bulb is stored on the **remote**. The wizard
+therefore reads binding tables across the ZHA network, including remotes and
+the coordinator. Large networks can take several minutes to scan. Keep battery
+remotes awake during scanning, copying and recovery.
+
+The preview lists incoming and outgoing bindings for the selected light
+endpoint, its Zigbee groups, unread devices and incompatible bindings. The
+wizard uses each light's actual ZHA endpoint, even when the endpoint numbers
+differ. It does not replace the entities or group memberships of other channels.
+
+Only compatible bindings are copied. Missing clusters, different Zigbee profiles
+and manufacturer-specific clusters block copying. For a remote bound to a
+Zigbee group, adding the new bulb to that group preserves the remote's existing
+group binding.
+
+If the old bulb is dead, its own binding table cannot be read. Incoming bindings
+may still be found on other devices, and known group memberships can be taken
+from ZHA's cache. Incomplete results are marked explicitly. You must rescan or
+accept copying only the known entries; an empty result with read failures does
+not establish that no bindings exist.
+
+Every addition is recorded before sending the command, and bindings and group
+memberships are read back to verify the result before the entity IDs are swapped.
+Existing entries on the new bulb and original entries on the old bulb are
+preserved. Both bulbs may therefore respond to physical controls, even after
+the old HA entity is disabled. Disconnect the old bulb after checking the new
+one, and keep it registered in ZHA while you still need the undo option.
+
+A full binding table may need manual cleanup before another binding can be added.
+On-device Zigbee scenes, attribute reporting settings and manufacturer-specific
+configuration are not copied. The wizard uses ZHA's existing gateway; it does
+not open a second connection to the radio adapter.
+
+## What still needs manual attention?
+
+| Item | Behavior |
 | --- | --- |
-| Gammel entity-ID i HA-grupper, scener, automasjoner, skript og dashboards | Beholdes; peker nå til den nye pæren. |
-| Device-ID i lastede automasjoner og skript | Oppdages; byttet blokkeres. Endre til entity-ID, eller bygg om maskinvareavhengige utløsere først. |
-| Gammel register-UUID i konfigurasjonsoppføringenes data/valg | Oppdages; byttet blokkeres. Endre referansen i den aktuelle hjelperens/integrasjonens UI. |
-| Rom og etiketter | Kopieres til entiteten. Delte enheter og deres andre entiteter flyttes ikke. Arver ny enhet rom mens gammel pære mangler rom, må dette avklares først. |
-| Farger, dimming, effekter og fargetemperatur | Fargemoduser og støttede funksjonsflagg sammenlignes når gamle pærens tilstand finnes. Scenenes verdier konverteres ikke; kontroller også Kelvin-område manuelt. |
-| ZHA-bindinger og Zigbee-grupper | Kan kartlegges og kopieres med valgfri ZHA-støtte; se nedenfor. |
-| Bindinger/grupper via Zigbee2MQTT eller Hue | Må settes opp i den opprinnelige integrasjonen. |
-| Historikk og statistikk | Migreres ikke. Navnebyttet lover ikke sammenhengende historikk for ny maskinvare. |
-| Assist/Alexa/Google-eksponering og integrasjonsspesifikke innstillinger | Må kontrolleres manuelt; de følger ikke nødvendigvis entity-ID-en. |
-| Referanser til ny pæres tidligere entity-ID | Skrives ikke om. Disse blir ugyldige og må ryddes manuelt. |
-| Inaktive/ikke lastede automasjoner, dynamiske maler og eksterne systemer | Kan ikke fullstendig kartlegges. Må kontrolleres manuelt. |
+| Explicit entity-ID references in HA groups, scenes, automations, scripts and dashboards | Keep the original ID and target the replacement bulb. |
+| Device-ID references in loaded automations and scripts | Known references block replacement. Change suitable actions to entity targets or rebuild hardware-specific triggers. |
+| Registry UUIDs in config-entry data or options | Known references block replacement; update the affected helper or integration first. |
+| Area and labels | Copied to the entity. Shared devices and their other entities are not moved. If the old bulb has no area but the new device supplies an inherited area, resolve this before replacing. |
+| Brightness, color, effects and color temperature | Available color modes and feature flags are compared when the old state is available. Scene values are not converted; check the new bulb's capabilities and Kelvin range. |
+| Zigbee2MQTT or Hue bindings and groups | Configure these in their original integration. Automatic copying supports ZHA only. |
+| History and statistics | Not migrated; continuous history for new hardware is not guaranteed. |
+| Assist, Alexa, Google and integration-specific exposure settings | Review manually; these may not follow the entity ID. |
+| Unloaded automations, dynamic templates and external systems | Cannot be fully inventoried and must be checked manually. |
+| Other entities on the old device | Power sensors, additional light channels and other entities are not replaced. |
 
-Dette er en første versjon for entity-ID-baserte oppsett. Den garanterer ikke
-automatisk migrering av alle typer maskinvare- og tredjepartsreferanser.
-Den bytter én `light`-entitet om gangen; andre entiteter på samme enhet, som
-strømforbrukssensorer eller flere lyskanaler, behandles ikke.
+## Undo and recovery
 
-## Kopiere ZHA-bindinger og Zigbee-grupper
+Open **Configure → Undo / recover last replacement** to restore the original
+entity IDs and settings, including enabled state. Only the most recent
+replacement is retained. Starting another replacement replaces the previous
+undo record.
 
-Velg ZHA-kopiering etter at begge pærer er lagt til samme ZHA-nettverk.
-Skanningen leser bindingstabellene til alle enheter ZHA kjenner, inkludert
-fjernkontroller og koordinatoren. Det er nødvendig fordi en binding
-**fjernkontroll → gammel pære** ligger på fjernkontrollen, ikke på pæren.
-Alle sider av hver tabell leses, med inntil tre samtidige avlesninger og en
-tidsgrense per enhet. Dette kan ta flere minutter på et stort nettverk.
+Undo overwrites later changes to the recorded names, areas, icons, aliases and
+labels. For ZHA copying, it also removes bindings and group memberships added
+by this wizard, while preserving entries that already existed. Keep ZHA and
+the affected devices available during recovery.
 
-Veiviseren viser direkte bindinger som peker til eller kommer fra den valgte
-lyskanalen, Zigbee-gruppene den tilhører, samt enheter som ikke kunne leses.
-Den bruker lysentitetenes faktiske ZHA-endepunkter, også når gammel og ny pære
-har forskjellige endepunktnumre. Entiteter og gruppemedlemskap for andre
-lyskanaler på samme enhet erstattes ikke.
-Bindinger med manglende klynger, ulik Zigbee-profil eller produsentspesifikke
-klynger blokkerer kopiering; funksjoner gjettes ikke.
+A persistent journal supports rollback on failure and recovery after
+interruption. An unfinished operation blocks further replacements until it is
+recovered. Recovery refuses to overwrite entity IDs now owned by unrelated
+entities, and refuses radio changes on a different Zigbee network or coordinator.
+The integration uses HA's registry and storage APIs rather than editing HA's
+registry or YAML files directly.
 
-Vekk batterifjernkontroller før du skanner, og hold dem våkne gjennom kopieringen.
-En pære som er helt død kan ikke levere sin egen bindingstabell. Veiviseren kan
-likevel finne innkommende bindinger på andre enheter og hente kjente
-gruppemedlemskap fra ZHA sin mellomlagring. Slike resultater merkes som
-ufullstendige. Standardvalget er å stoppe til du enten skanner på nytt eller
-uttrykkelig godtar at bare kjente oppføringer kopieres. Et tomt resultat med
-feil betyr **ikke** at pæren var uten bindinger.
+This is not a full HA transaction: history, already triggered automations and
+unrelated external changes cannot be undone by the wizard. Keep your HA backup.
 
-Ved bekreftelse opprettes bare manglende bindinger og gruppemedlemskap på den nye
-pæren. Bindinger fra fjernkontroller til en Zigbee-gruppe trenger ingen endring;
-den nye pæren legges til samme gruppe. Protokollsvar kontrolleres, og alle
-forventede oppføringer leses tilbake før entity-ID-ene byttes.
+## Troubleshooting
 
-Gamle bindinger og medlemskap beholdes for å gjøre tilbakeføring mulig. Begge
-pærer kan derfor reagere på direkte fjernkontroller eller gruppemeldinger,
-selv om gammel HA-entitet er deaktivert. Koble fra den gamle pæren etter at du
-har kontrollert ny pære. Vent med å slette den fra ZHA til du ikke lenger trenger
-angremuligheten. Ved full bindingstabell kan du måtte rydde gamle oppføringer
-manuelt før kopiering.
+- **Integration not found:** check the folder layout above and restart Home
+  Assistant completely. The directory must be named `light_bulb_replacement`.
+- **New bulb unavailable:** finish pairing in its normal integration and confirm
+  that the bulb can be controlled before opening the wizard.
+- **Archive ID already exists:** rename the existing `_old` entity in HA or undo
+  the previous replacement before trying again.
+- **ZHA scan incomplete:** wake the listed remotes, check device connectivity and
+  scan again. Keep the old bulb registered in ZHA.
+- **Recovery required:** make the affected devices available, then use
+  **Undo / recover last replacement** before attempting another replacement.
+- **More detail needed:** open **Settings → System → Logs** and look for
+  `light_bulb_replacement` entries.
 
-ZHA-operasjonene lagres i samme gjenopprettingsjournal som navnebyttet. Ved feil
-forsøkes tilbakeføring. Angre fjerner bare bindinger og medlemskap veiviseren
-la til; eksisterende oppføringer og opprinnelige bindinger beholdes. Tapte svar
-eller utilgjengelige enheter kan kreve ny gjenoppretting med enhetene våkne.
-Et annet Zigbee-nettverk eller en annen koordinator blokkerer radioendringer.
+## Updating and removing
 
-Støtten bruker ZHA sin eksisterende gateway og Zigpy-kommandoer. Ingen egen
-tilkobling til Zigbee-adapteren opprettes. Innebygde Zigbee-scener,
-attributtrapportering, produsentspesifikke innstillinger og HA-automasjoners
-device-ID-er kopieres ikke. Dette må kontrolleres separat. Testene simulerer
-radioen; fysisk ZHA-utstyr er foreløpig ikke testet.
+For HACS installations, download updates through HACS and restart Home Assistant.
+For manual installations, replace only the integration's folder with the updated
+files and restart.
 
-## Angre og gjenoppretting
+Removing this integration does not undo replacements. If you want to restore the
+last replacement, run undo first. You can then remove the wizard from
+**Settings → Devices & services**, remove its files through HACS or manually,
+and restart Home Assistant.
 
-**Konfigurer → Angre / gjenopprett siste bytte** gjenoppretter de opprinnelige
-ID-ene og innstillingene for begge entiteter, inkludert tidligere aktivering.
-Kun siste bytte beholdes. Et nytt bytte erstatter forrige angrejournal.
-Senere endringer i disse navnene, rommene, ikonene, aliasene eller etikettene
-overskrives ved gjenoppretting.
+## Development
 
-Integrasjonen lagrer journalen gjennom Home Assistants Storage-API før første
-endring. Feil under byttet utløser tilbakeføring. Etter et avbrudd blokkeres nye
-bytter til det uferdige byttet er gjenopprettet. Gjenoppretting bruker
-register-UUID-er for å finne riktig maskinvare og nekter å overta ID-er som nå
-tilhører andre entiteter. Journalen beholdes ved avlasting av integrasjonen.
-Den skriver aldri direkte til HA sine registerfiler eller YAML-filer.
-
-Dette er ikke en full HA-transaksjon: historikk, allerede utløste automasjoner,
-endringer i eksterne systemer og strømbrudd under lagring kan ikke angres av
-veiviseren. HA-sikkerhetskopien er fortsatt nødvendig.
-
-## Utvikling
-
-Bruk eksisterende checkout i skymiljøet. Hver skyoppgave er allerede isolert;
-det trengs ikke et ekstra Git-worktree.
-
-Med Python 3.14.2+ og `uv`:
+Use Python **3.14.2+** and `uv`:
 
 ```sh
 uv sync --frozen
@@ -150,9 +243,11 @@ uv run ruff check .
 uv run ruff format --check .
 ```
 
-Testene starter ekte Home Assistant-komponenter med to simulerte lyspærer.
-De prøver registerbytte, fysiske identiteter, `light.turn_on`, eksisterende
-grupper/scener/automasjoner, brukerflyten, feiltilbakeføring og journalgjenoppretting.
-ZHA-testene bruker ekte Zigpy-endepunkter og protokolltyper med simulert radio,
-inkludert inn-/utgående bindinger, gruppemedlemskap, tapte svar og avbrudd.
-Ingen ekte HA-installasjon eller fysiske pærer er endret av testene.
+Tests exercise real HA components and configuration flows with simulated bulbs.
+ZHA tests use real Zigpy endpoints and protocol types with simulated radio
+responses, including incoming/outgoing bindings, group membership, lost
+acknowledgements and interrupted recovery. They do not modify a physical HA
+installation or Zigbee devices.
+
+For Codex cloud tasks, use the existing checkout: each task already has an
+isolated environment, so an additional Git worktree is unnecessary.
