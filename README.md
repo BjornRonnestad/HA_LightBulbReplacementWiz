@@ -210,6 +210,10 @@ unrelated external changes cannot be undone by the wizard. Keep your HA backup.
 
 - **Integration not found:** check the folder layout above and restart Home
   Assistant completely. The directory must be named `light_bulb_replacement`.
+  Early development builds registered the wizard as a helper, placing it under
+  **Settings → Devices & services → Helpers**. Update to the release version and
+  restart to make it available under **Add integration**. Also check the minimum
+  Home Assistant version listed above.
 - **New bulb unavailable:** finish pairing in its normal integration and confirm
   that the bulb can be controlled before opening the wizard.
 - **Archive ID already exists:** rename the existing `_old` entity in HA or undo

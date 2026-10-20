@@ -1,6 +1,16 @@
 """Run the wizard through Home Assistant's real flow manager."""
 
+from homeassistant import loader
+
 from custom_components.light_bulb_replacement.const import DOMAIN
+
+
+async def test_wizard_is_discoverable_under_add_integration(runtime):
+    hass, _, _, _, _ = runtime
+    descriptions = await loader.async_get_integration_descriptions(hass)
+    assert DOMAIN in descriptions["custom"]["integration"]
+    assert DOMAIN not in descriptions["custom"]["helper"]
+    assert DOMAIN in await loader.async_get_config_flows(hass)
 
 
 async def test_single_instance_and_entry_unload(wizard):
