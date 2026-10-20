@@ -1,5 +1,7 @@
 # Light Bulb Replacement Wizard
 
+<img src="custom_components/light_bulb_replacement/brand/icon.png" alt="An unlit bulb replaced by a working, illuminated bulb" width="160">
+
 A custom Home Assistant integration that helps you replace a light bulb while
 keeping its existing name and entity ID. Groups, scenes, automations, scripts
 and dashboards that reference that entity ID can then use the replacement bulb.
@@ -7,7 +9,7 @@ and dashboards that reference that entity ID can then use the replacement bulb.
 The new bulb must already be added to Home Assistant through its normal
 integration. This wizard does not pair devices.
 
-Version **0.1.1** includes optional support for copying **ZHA bindings and Zigbee
+Version **0.2.0** includes optional support for copying **ZHA bindings and Zigbee
 group memberships**, with a preview, verification and undo.
 
 ## Features
@@ -22,7 +24,8 @@ group memberships**, with a preview, verification and undo.
   manual changes.
 - Optionally discover and copy compatible ZHA bindings and Zigbee groups.
 - Undo the last replacement or recover an interrupted operation.
-- English and Norwegian Bokmål interface translations.
+- English interface text, including when Home Assistant uses Norwegian Bokmål.
+- Bundled integration icon showing an unlit bulb replaced by a working bulb.
 
 ## Requirements
 
@@ -72,6 +75,8 @@ or add it manually:
    └── custom_components/
        └── light_bulb_replacement/
            ├── __init__.py
+           ├── brand/
+           │   └── icon.png
            ├── config_flow.py
            ├── const.py
            ├── manifest.json

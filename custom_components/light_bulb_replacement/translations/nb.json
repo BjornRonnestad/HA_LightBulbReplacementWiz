@@ -3,94 +3,94 @@
   "config": {
     "step": {
       "user": {
-        "title": "Veiviser for pærebytte",
-        "description": "Legg først den nye pæren til Home Assistant med dens vanlige integrasjon. Etter oppsett: åpne **Konfigurer** for å bytte pære eller gjenopprette siste bytte."
+        "title": "Light bulb replacement",
+        "description": "First add the new bulb to Home Assistant using its normal integration. After setup, open **Configure** to replace a bulb or restore the last replacement."
       }
     },
     "abort": {
-      "already_configured": "Veiviseren er allerede installert. Bruk Konfigurer på integrasjonen.",
-      "single_instance_allowed": "Veiviseren er allerede installert. Bruk Konfigurer på integrasjonen."
+      "already_configured": "The wizard is already installed. Use Configure on the integration.",
+      "single_instance_allowed": "The wizard is already installed. Use Configure on the integration."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Pærebytte",
+        "title": "Bulb replacement",
         "menu_options": {
-          "select": "Bytt pære",
-          "restore": "Angre / gjenopprett siste bytte"
+          "select": "Replace bulb",
+          "restore": "Undo / recover last replacement"
         }
       },
       "select": {
-        "title": "Velg pærer",
-        "description": "Den gamle pæren kan være frakoblet. Den nye må være registrert, aktivert og tilgjengelig. Grupper kan ikke erstattes.\n\nVed ZHA-kopiering: Vekk batterifjernkontroller og behold den gamle pæren i ZHA under skanningen. Veiviseren undersøker også andre enheter, siden bindinger til pæren ligger på avsenderen.",
+        "title": "Select bulbs",
+        "description": "The old bulb may be offline. The new bulb must be registered, enabled and available. Groups cannot be replaced.\n\nFor ZHA copying: wake battery remotes and keep the old bulb in ZHA during scanning. Other devices are scanned too, because incoming bindings live on the sender.",
         "data": {
-          "old_entity_id": "Gammel pære",
-          "new_entity_id": "Ny pære",
-          "copy_zha": "Finn og kopier ZHA-bindinger og Zigbee-grupper"
+          "old_entity_id": "Old bulb",
+          "new_entity_id": "New bulb",
+          "copy_zha": "Discover and copy ZHA bindings and Zigbee groups"
         }
       },
       "confirm": {
-        "title": "Kontroller byttet",
-        "description": "**{old} → {archived}** (navn: {name}_OLD, deaktiveres).\n\n**{new} → {old}** (navn: {name}). Rom-ID: {area}. Rom, etiketter, aliaser og eget ikon overføres.\n\n**Må rettes før bytte:** {blockers}\n\n**Ulike lysegenskaper:** {capabilities} (`capabilities` betyr ulik farge/dimming/effekter). Scener må kontrolleres.\n\nTa en HA-sikkerhetskopi. Referanser til gammel entity-ID fortsetter å peke til ny pære. Historikk flyttes ikke. Nye pærens tidligere referanser må ryddes manuelt. Zigbee-bindinger, Zigbee-grupper, eksterne systemer og dynamiske maler kan ikke kontrolleres her. Gammel maskinvares device-ID og unique-ID beholdes. Stopp berørte automasjoner mens byttet pågår; det kommer tilstandsendringer.",
+        "title": "Review replacement",
+        "description": "**{old} → {archived}** (name: {name}_OLD, disabled).\n\n**{new} → {old}** (name: {name}). Area ID: {area}. Area, labels, aliases and custom icon are copied.\n\n**Resolve before replacing:** {blockers}\n\n**Different light capabilities:** {capabilities} (`capabilities` means different color/dimming/effect support). Review scenes.\n\nTake a Home Assistant backup. References to the original entity ID will target the new bulb. History is not migrated. Clean up references to the new bulb’s previous ID manually. Zigbee bindings/groups, external systems and dynamic templates cannot be verified here. Hardware device IDs and unique IDs stay unchanged. Pause affected automations during replacement; state changes will occur.",
         "data": {
-          "confirm": "Jeg har tatt sikkerhetskopi og lest forhåndsvisningen"
+          "confirm": "I have taken a backup and reviewed the preview"
         }
       },
       "restore": {
-        "title": "Gjenopprett siste bytte",
-        "description": "Gammel: {old}\n\nNy: {new}\n\nJournalstatus: {status}\n\nGjenoppretter ID-er og tidligere innstillinger for begge pærer, inkludert aktivering. Senere endringer i disse innstillingene overskrives. Historikk og eksterne endringer gjenopprettes ikke.\n\nVed ZHA-kopiering fjernes også nye bindinger og gruppemedlemskap som veiviseren la til. Oppføringer som fantes før byttet beholdes. ZHA og berørte enheter må være tilgjengelige.",
+        "title": "Restore last replacement",
+        "description": "Old: {old}\n\nNew: {new}\n\nJournal status: {status}\n\nRestores original IDs and settings for both bulbs, including enabled state. Later edits to those settings are overwritten. History and external changes are not restored.\n\nFor ZHA copying, newly added bindings and memberships are also removed. Entries present before replacement are preserved. ZHA and the affected devices must be available.",
         "data": {
-          "confirm": "Gjenopprett opprinnelige innstillinger"
+          "confirm": "Restore original settings"
         }
       },
       "confirm_zha": {
-        "title": "Kontroller byttet",
-        "description": "**{old} → {archived}** (navn: {name}_OLD, deaktiveres).\n\n**{new} → {old}** (navn: {name}). Rom-ID: {area}. Rom, etiketter, aliaser og eget ikon overføres.\n\n**Må rettes før bytte:** {blockers}\n\n**Ulike lysegenskaper:** {capabilities} (`capabilities` betyr ulik farge/dimming/effekter). Scener må kontrolleres.\n\nTa en HA-sikkerhetskopi. Referanser til gammel entity-ID fortsetter å peke til ny pære. Historikk flyttes ikke. Nye pærens tidligere referanser må ryddes manuelt. eksterne systemer og dynamiske maler kan ikke kontrolleres her. Gammel maskinvares device-ID og unique-ID beholdes. Stopp berørte automasjoner mens byttet pågår; det kommer tilstandsendringer.\n\n**ZHA-bindinger som kopieres:**\n{zha_bindings}\n\n**Zigbee-grupper:** {zha_groups}\n\n**Ikke lest / ufullstendig kartlegging:**\n{zha_missing}\n\n**Uforenlige bindinger (blokkerer kopiering):**\n{zha_blockers}\n\nGamle bindinger og medlemskap beholdes. Eksisterende bindinger på den nye pæren beholdes. Nye oppføringer leses tilbake for å kontrollere resultatet. Angre fjerner bare det veiviseren la til. Fysisk styring kan påvirke begge pærene inntil den gamle kobles fra. Innebygde Zigbee-scener og rapporteringsinnstillinger kopieres ikke.",
+        "title": "Review replacement",
+        "description": "**{old} → {archived}** (name: {name}_OLD, disabled).\n\n**{new} → {old}** (name: {name}). Area ID: {area}. Area, labels, aliases and custom icon are copied.\n\n**Resolve before replacing:** {blockers}\n\n**Different light capabilities:** {capabilities} (`capabilities` means different color/dimming/effect support). Review scenes.\n\nTake a Home Assistant backup. References to the original entity ID will target the new bulb. History is not migrated. Clean up references to the new bulb’s previous ID manually. External systems and dynamic templates cannot be verified here. Hardware device IDs and unique IDs stay unchanged. Pause affected automations during replacement; state changes will occur.\n\n**ZHA bindings to copy:**\n{zha_bindings}\n\n**Zigbee groups:** {zha_groups}\n\n**Unread / incomplete discovery:**\n{zha_missing}\n\n**Incompatible bindings (block copying):**\n{zha_blockers}\n\nOriginal bindings and memberships are retained. Existing bindings on the new bulb are preserved. New entries are read back to verify success. Undo removes only entries added by the wizard. Physical controls may affect both bulbs until the old one is disconnected. On-device Zigbee scenes and reporting configuration are not copied.",
         "data": {
-          "confirm": "Jeg har tatt sikkerhetskopi og lest forhåndsvisningen",
-          "accept_partial": "Jeg godtar at kartleggingen er ufullstendig og bare kjente oppføringer kopieres"
+          "confirm": "I have taken a backup and reviewed the preview",
+          "accept_partial": "I accept incomplete discovery and copying only known entries"
         }
       },
       "scan": {
-        "title": "Kartlegger ZHA"
+        "title": "Discovering ZHA bindings"
       },
       "execute": {
-        "title": "Utfører ZHA-endringer"
+        "title": "Applying ZHA changes"
       },
       "operation_failed": {
-        "title": "ZHA-operasjonen ble ikke fullført",
-        "description": "Les feilen nedenfor. Fortsett tilbake til menyen. Hvis et bytte trenger gjenoppretting, velg «Angre / gjenopprett siste bytte» og hold berørte enheter våkne."
+        "title": "ZHA operation did not complete",
+        "description": "Read the error below. Continue to the menu. If a replacement needs recovery, select Undo / recover last replacement and keep the affected devices awake."
       }
     },
     "error": {
-      "same_entity": "Velg to forskjellige lys.",
-      "invalid_light": "Velg to registrerte lys, ikke grupper. Det nye lyset må være aktivert.",
-      "new_unavailable": "Den nye pæren må være tilgjengelig i Home Assistant først.",
-      "archive_exists": "Foreslått entity-ID med _old er allerede i bruk. Gi den andre entiteten nytt navn først.",
-      "recovery_required": "Et bytte trenger gjenoppretting. Gå tilbake til menyen og gjenopprett siste bytte. Se loggen dersom det feiler.",
-      "selection_changed": "Valget eller innstillingene er endret. Lukk dialogen og velg pærene på nytt.",
-      "unsupported_references": "Rett opp referansene til enheter/register-ID-er i listen før byttet. De følger ikke entity-ID-en.",
-      "confirmation_required": "Bekreft at du har lest forhåndsvisningen og tatt sikkerhetskopi av Home Assistant.",
-      "replacement_failed": "Byttet feilet. Opprinnelige registerinnstillinger er gjenopprettet. Se loggen.",
-      "storage_failed": "Gjenopprettingsjournalen kunne ikke lagres. Kontroller diskplass og logg.",
-      "recovery_conflict": "En registrert entitet mangler, er flyttet, eller opprinnelig ID er opptatt. Rett opp konflikten før gjenoppretting.",
-      "nothing_to_restore": "Det finnes ikke noe bytte å gjenopprette.",
-      "new_device_area": "Den gamle pæren har ikke rom, men den nye arver rom fra enheten sin. Fjern rommet fra den nye enheten først, eller velg et rom for den gamle pæren.",
-      "zha_unavailable": "ZHA må være konfigurert og kjøre før skanning.",
-      "zha_lights_required": "Velg lysentiteter på to forskjellige fysiske ZHA-enheter. Grupper og virtuelle lys støttes ikke.",
-      "zha_device_missing": "En valgt ZHA-enhet eller lyskanal mangler. Kontroller ZHA og velg pærene på nytt.",
-      "zha_read_failed": "En enhet svarte ikke med en gyldig bindings- eller gruppetabell. Vekk batterienheter og skann igjen.",
-      "zha_invalid_table": "En bindingstabell var ufullstendig eller endret seg under lesing. Vekk enheten og skann igjen.",
-      "zha_incompatible": "Den nye pæren støtter ikke oppførte funksjoner eller Zigbee-profil. Produsentspesifikke bindinger må settes opp manuelt.",
-      "zha_incomplete": "Noen enheter kunne ikke leses. Skann igjen mens de er våkne, eller bekreft uttrykkelig at bare kjente bindinger og grupper skal kopieres.",
-      "zha_network_changed": "ZHA-nettverket eller valgte lyskanaler er endret. Ingen flere radioendringer utføres. Gå tilbake til menyen og kontroller ZHA.",
-      "zha_write_failed": "En Zigbee-kommando for binding eller gruppe feilet. Automatisk tilbakeføring er forsøkt; kontroller gjenopprettingsstatus før nytt forsøk.",
-      "zha_verification_failed": "Enheten bekreftet ikke forventet binding eller gruppemedlemskap ved ny avlesning. Tilbakeføring er forsøkt; kontroller gjenopprettingen før nytt forsøk."
+      "same_entity": "Select two different lights.",
+      "invalid_light": "Select two registered lights (not groups). The new light must be enabled.",
+      "new_unavailable": "The new light must be available in Home Assistant first.",
+      "archive_exists": "The proposed _old entity ID is already in use. Rename that entity first.",
+      "recovery_required": "An operation needs recovery. Return to the menu and restore the last replacement. Check the logs if recovery fails.",
+      "selection_changed": "The selection or its settings changed. Close this dialog and select the lights again.",
+      "unsupported_references": "Resolve the listed device/registry references before replacing. These do not follow an entity ID.",
+      "confirmation_required": "Confirm that you have read the preview and taken a Home Assistant backup.",
+      "replacement_failed": "Replacement failed. Original registry settings have been restored. Check the logs.",
+      "storage_failed": "The recovery journal could not be saved. Check available disk space and logs.",
+      "recovery_conflict": "A recorded entity is missing, moved, or its original ID is occupied. Resolve the conflict before restoring.",
+      "nothing_to_restore": "There is no replacement to restore.",
+      "new_device_area": "The old bulb has no area, but the new bulb inherits one from its device. Clear the new device area first, or assign an area to the old bulb.",
+      "zha_unavailable": "ZHA must be configured and running before scanning.",
+      "zha_lights_required": "Select light entities on two different physical ZHA devices. Groups and virtual lights are not supported.",
+      "zha_device_missing": "A selected ZHA device or endpoint is missing. Check ZHA and select the lights again.",
+      "zha_read_failed": "A device did not return a valid binding or group table. Wake battery devices and scan again.",
+      "zha_invalid_table": "A binding table was incomplete or changed during pagination. Wake the device and scan again.",
+      "zha_incompatible": "The replacement does not support the listed clusters or Zigbee profile. Manufacturer-specific bindings need manual setup.",
+      "zha_incomplete": "Some devices could not be read. Rescan with them awake, or explicitly accept copying only the known bindings and groups.",
+      "zha_network_changed": "The ZHA network or selected endpoints changed. No further radio changes will be made. Return to the menu and check ZHA.",
+      "zha_write_failed": "A Zigbee binding/group command failed. Automatic rollback was attempted; check the recovery status before retrying.",
+      "zha_verification_failed": "The device did not confirm the expected binding/group on read-back. Automatic rollback was attempted; check recovery before retrying."
     },
     "progress": {
-      "scan_zha": "Leser bindingstabeller i ZHA-nettverket. Dette kan ta noen minutter. Hold batterifjernkontroller våkne. Ingen bindinger endres under kartleggingen.",
-      "execute_zha": "Kopierer eller gjenoppretter bindinger og gruppemedlemskap, og kontrollerer svarene fra enhetene. Hold enhetene våkne. Ved avbrudd, bruk «Angre / gjenopprett siste bytte»."
+      "scan_zha": "Reading binding tables across the ZHA network. This can take a few minutes. Keep battery remotes awake. No bindings are changed during discovery.",
+      "execute_zha": "Copying or restoring bindings and group memberships, and checking device responses. Keep devices awake. If interrupted, use Undo / recover last replacement."
     }
   }
 }
