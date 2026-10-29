@@ -12,7 +12,7 @@ and dashboards that reference that entity ID can then use the replacement bulb.
 The new bulb must already be added to Home Assistant through its normal
 integration. This wizard does not pair devices.
 
-Version **0.2.1** supports copying bindings and Zigbee group memberships through
+Version **0.2.2** supports copying bindings and Zigbee group memberships through
 **ZHA or Zigbee2MQTT**, with a preview, confirmation and undo. Zigbee2MQTT
 discovery uses its cached bridge records; see the limitations below.
 
