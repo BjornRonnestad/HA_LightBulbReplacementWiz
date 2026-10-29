@@ -1,4 +1,4 @@
-name: Publish 0.2.2
+name: Publish 0.2.3
 
 on:
   workflow_run:
@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: publish-0.2.2
+  group: publish-0.2.3
   cancel-in-progress: false
 
 jobs:
@@ -34,7 +34,7 @@ jobs:
         run: |
           set -euo pipefail
           version=$(python -c 'import json; print(json.load(open("custom_components/light_bulb_replacement/manifest.json"))["version"])')
-          if [[ "$version" != "0.2.2" ]]; then
+          if [[ "$version" != "0.2.3" ]]; then
             echo "publish=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -55,12 +55,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if gh release view 0.2.2 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo 'Release 0.2.2 already exists'
+          if gh release view 0.2.3 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo 'Release 0.2.3 already exists'
             exit 0
           fi
-          gh release create 0.2.2 \
+          gh release create 0.2.3 \
             --repo "$GITHUB_REPOSITORY" \
             --target "$RELEASE_SHA" \
-            --title '0.2.2' \
-            --notes-file RELEASE_NOTES_0.2.2.md
+            --title '0.2.3' \
+            --notes-file RELEASE_NOTES_0.2.3.md
