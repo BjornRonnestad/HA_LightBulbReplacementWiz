@@ -1,5 +1,8 @@
 # Light Bulb Replacement Wizard
 
+[![HACS and Hassfest](https://github.com/BjornRonnestad/HA_LightBulbReplacementWiz/actions/workflows/validate.yml/badge.svg)](https://github.com/BjornRonnestad/HA_LightBulbReplacementWiz/actions/workflows/validate.yml)
+[![Tests](https://github.com/BjornRonnestad/HA_LightBulbReplacementWiz/actions/workflows/tests.yml/badge.svg)](https://github.com/BjornRonnestad/HA_LightBulbReplacementWiz/actions/workflows/tests.yml)
+
 <img src="custom_components/light_bulb_replacement/brand/icon.png" alt="An unlit bulb replaced by a working, illuminated bulb" width="160">
 
 A custom Home Assistant integration that helps you replace a light bulb while
@@ -314,6 +317,9 @@ last replacement, run undo first. You can then remove the wizard from
 and restart Home Assistant.
 
 ## Development
+
+Release preparation and default HACS catalog submission are documented in
+[RELEASING.md](RELEASING.md). This project is licensed under the [MIT License](LICENSE).
 
 Use Python **3.14.2+** and `uv`:
 
